@@ -10,9 +10,10 @@ user4: email:getiqisi@forexzig.com password: Testuser4 username:getiqisi
 user5: email:dohysosy@denipl.net password: Testuser5 username:dohysosy
 
 
-user5: email:lozygu@denipl.net password: Testuser6 username:lozygu
-user5: email:gufubo@denipl.com password: Testuser7 username:gufubo
+user6: email:lozygu@denipl.net password: Testuser6 username:lozygu
+user7: email:gufubo@denipl.com password: Testuser7 username:gufubo
 To do:
 have email at the top when logged in
 Bug fixed - table was not populating
 Add chat screen
+
