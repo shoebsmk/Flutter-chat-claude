@@ -1,0 +1,18 @@
+
+
+
+user1: email:shoebsmk@gmail.com password: Demo1234
+user2 email:shoebwm@gmail.com password: Demo5678 username:Khan
+user3 email:xatofin741@alexida.com password: Demo2345 username:alexida
+user4: email:getiqisi@forexzig.com password: Testuser4 username:getiqisi
+
+// verification reqd
+user5: email:dohysosy@denipl.net password: Testuser5 username:dohysosy
+
+
+user5: email:lozygu@denipl.net password: Testuser6 username:lozygu
+user5: email:gufubo@denipl.com password: Testuser7 username:gufubo
+To do:
+have email at the top when logged in
+Bug fixed - table was not populating
+Add chat screen
