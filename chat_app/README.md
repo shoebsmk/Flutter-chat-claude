@@ -1,6 +1,6 @@
 # Chat App (AI‑assisted)
 
-Basic chat app scaffold built with Flutter and Supabase, created using AI coding tools. It includes email/password auth, a public `users` table synced from `auth.users`, and a starter UI for listing users and navigating to chat.
+A full-featured real-time chat application built with Flutter and Supabase. Features include real-time messaging with read receipts, typing indicators, presence tracking, profile editing, and an **AI Assistant** that lets you send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there".
 
 ## Table of Contents
 
@@ -31,7 +31,7 @@ Basic chat app scaffold built with Flutter and Supabase, created using AI coding
 - Unread message tracking
 - User search functionality
 - Profile editing (username, bio, profile picture upload)
-- **AI-powered command-based messaging** - Send messages using natural language commands like "Send Ahmed I'll be late"
+- **AI Assistant** - Send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there"
 
 ## Prerequisites
 
