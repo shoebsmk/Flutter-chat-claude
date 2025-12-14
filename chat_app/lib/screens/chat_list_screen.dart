@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'chat_screen.dart';
 import 'auth_screen.dart';
 import 'profile_edit_screen.dart';
+import 'settings_screen.dart';
 import '../models/user.dart' as models;
 import '../models/message.dart';
 import '../services/auth_service.dart';
@@ -265,6 +266,17 @@ class _ChatListScreenState extends State<ChatListScreen>
         ],
       ),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.settings),
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const SettingsScreen(),
+              ),
+            );
+          },
+          tooltip: 'Settings',
+        ),
         IconButton(
           icon: const Icon(Icons.person),
           onPressed: () {

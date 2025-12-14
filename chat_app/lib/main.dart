@@ -3,6 +3,7 @@ import 'config/supabase_config.dart';
 import 'screens/auth_screen.dart';
 import 'screens/chat_list_screen.dart';
 import 'services/auth_service.dart';
+import 'services/theme_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/constants.dart';
 
@@ -11,34 +12,79 @@ void main() async {
 
   await SupabaseConfig.initialize();
 
-  runApp(const MyApp());
+  // Load saved theme
+  final themeMode = await ThemeService.loadThemeMode();
+
+  runApp(MyApp(initialThemeMode: themeMode));
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final ThemeMode initialThemeMode;
+
+  const MyApp({
+    super.key,
+    required this.initialThemeMode,
+  });
 
   @override
   State<MyApp> createState() => _MyAppState();
+
+  /// Returns the current theme mode.
+  /// Returns null if no instance is available.
+  static ThemeMode? themeModeOf(BuildContext context) {
+    return _MyAppState._instance?.themeMode;
+  }
+
+  /// Sets the theme mode and persists it to SharedPreferences.
+  static Future<void> setThemeModeOf(BuildContext context, ThemeMode mode) async {
+    await _MyAppState._instance?.setThemeMode(mode);
+  }
 }
 
 class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  late ThemeMode _themeMode;
   final _authService = AuthService();
+  
+  static _MyAppState? _instance;
+
+  /// Returns the current theme mode.
+  ThemeMode get themeMode => _themeMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeMode = widget.initialThemeMode;
+    _instance = this;
+  }
+
+  @override
+  void dispose() {
+    _instance = null;
+    super.dispose();
+  }
+
+  /// Sets the theme mode and persists it to SharedPreferences.
+  Future<void> setThemeMode(ThemeMode mode) async {
+    await ThemeService.saveThemeMode(mode);
+    if (mounted) {
+      setState(() => _themeMode = mode);
+    }
+  }
 
   /// Toggles between light and dark theme.
   /// Can be exposed to UI when theme toggle is implemented.
   // ignore: unused_element
-  void toggleTheme() {
-    setState(() {
-      if (_themeMode == ThemeMode.light) {
-        _themeMode = ThemeMode.dark;
-      } else if (_themeMode == ThemeMode.dark) {
-        _themeMode = ThemeMode.light;
-      } else {
-        // If system, default to light
-        _themeMode = ThemeMode.light;
-      }
-    });
+  Future<void> toggleTheme() async {
+    ThemeMode newMode;
+    if (_themeMode == ThemeMode.light) {
+      newMode = ThemeMode.dark;
+    } else if (_themeMode == ThemeMode.dark) {
+      newMode = ThemeMode.light;
+    } else {
+      // If system, default to light
+      newMode = ThemeMode.light;
+    }
+    await setThemeMode(newMode);
   }
 
   @override
