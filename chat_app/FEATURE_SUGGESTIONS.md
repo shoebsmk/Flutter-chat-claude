@@ -17,20 +17,7 @@ A prioritized list of features to enhance the chat application, organized by com
 - Animated dots indicator
 - Auto-stops after inactivity
 
----
-
-## 🔴 High Priority — Core Enhancements
-
-### 3. Message Deletion
-Delete your own messages (soft delete or hard delete).
-
-**Implementation:**
-- Add `deleted_at` column to messages table
-- Update message queries to filter deleted messages
-- Add delete button/swipe action on messages
-- Consider "Delete for everyone" vs "Delete for me"
-
-### 4. Profile Editing
+### 3. Profile Editing
 Edit username, profile picture, and bio.
 
 **Implementation:**
@@ -39,13 +26,26 @@ Edit username, profile picture, and bio.
 - Use Supabase Storage for profile images
 - Update UserAvatar widget to show real images
 
-### 5. Theme Toggle UI
+### 4. Theme Toggle UI
 Add a settings screen with theme switcher.
 
 **Implementation:**
 - Create settings screen accessible from chat list
 - Add theme preference persistence (SharedPreferences)
 - Expose existing `toggleTheme()` method in main.dart
+
+---
+
+## 🔴 High Priority — Core Enhancements
+
+### 5. Message Deletion
+Delete your own messages (soft delete or hard delete).
+
+**Implementation:**
+- Add `deleted_at` column to messages table
+- Update message queries to filter deleted messages
+- Add delete button/swipe action on messages
+- Consider "Delete for everyone" vs "Delete for me"
 
 ---
 
@@ -61,7 +61,7 @@ Send images, documents, and other files in chat.
 - Create image picker and file preview widgets
 - Handle image compression before upload
 
-### 7. Message Search
+### 8. Message Search
 Search within conversations or across all messages.
 
 **Implementation:**

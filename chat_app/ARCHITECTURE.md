@@ -133,13 +133,16 @@ lib/
 ├── screens/
 │   ├── auth_screen.dart        # Authentication screen
 │   ├── chat_list_screen.dart   # List of conversations
-│   └── chat_screen.dart        # Individual chat screen
+│   ├── chat_screen.dart        # Individual chat screen
+│   ├── profile_edit_screen.dart # Profile editing screen
+│   └── settings_screen.dart    # App settings screen
 ├── services/
 │   ├── auth_service.dart       # Authentication logic
 │   ├── chat_service.dart       # Chat/messaging logic
 │   ├── user_service.dart       # User management logic
 │   ├── presence_service.dart   # Online/offline status management
-│   └── typing_service.dart     # Typing indicators management
+│   ├── typing_service.dart     # Typing indicators management
+│   └── theme_service.dart      # Theme preference persistence
 ├── theme/
 │   └── app_theme.dart          # App theming
 ├── utils/
@@ -238,7 +241,11 @@ stateDiagram-v2
     CheckAuth --> ChatListScreen: Authenticated
     AuthScreen --> ChatListScreen: Login successful
     ChatListScreen --> ChatScreen: Select conversation
+    ChatListScreen --> SettingsScreen: Settings button
+    ChatListScreen --> ProfileEditScreen: Profile button
     ChatScreen --> ChatListScreen: Back navigation
+    SettingsScreen --> ChatListScreen: Back navigation
+    ProfileEditScreen --> ChatListScreen: Back navigation
     ChatListScreen --> AuthScreen: Logout
     AuthScreen --> [*]
 ```
@@ -384,6 +391,21 @@ Message {
 - Filters typing status by conversation participants
 - Validates typing status freshness (within 5 seconds)
 
+#### ThemeService
+**Purpose:** Manages theme preference persistence
+
+**Key Methods:**
+- `loadThemeMode()` - Loads saved theme mode from SharedPreferences
+- `saveThemeMode()` - Saves theme mode preference to SharedPreferences
+
+**Dependencies:**
+- SharedPreferences (local storage)
+
+**Features:**
+- Persists theme preference (System, Light, Dark) across app restarts
+- Defaults to System theme if no preference is saved
+- Static methods for easy access
+
 ---
 
 ### Screens
@@ -410,6 +432,7 @@ Message {
 - Conversation previews (last message)
 - Unread message badges
 - User search
+- Settings navigation
 - Logout functionality
 
 **State Management:**
@@ -442,13 +465,20 @@ Message {
 - Form validation
 - Loading states
 - Error states
-- Message timestamps
-- Scroll to bottom on new messages
+
+#### SettingsScreen
+**Purpose:** App settings and preferences interface
+
+**Features:**
+- Theme selection (System, Light, Dark)
+- Radio button selection for theme modes
+- Real-time theme updates
+- Theme preference persistence
 
 **State Management:**
-- StreamBuilder for messages
-- TextEditingController for input
-- ScrollController for list
+- Local state with StatefulWidget
+- Syncs with MyApp theme state
+- Updates UI when theme changes
 
 ---
 
@@ -515,6 +545,7 @@ google_fonts: ^6.1.0           # Typography
 shimmer: ^3.0.0                # Loading animations
 flutter_animate: ^4.5.0        # UI animations
 timeago: ^3.6.1                # Relative time formatting
+shared_preferences: ^2.2.2     # Local storage for preferences
 ```
 
 ---
@@ -743,7 +774,9 @@ AppTheme {
 ### Theme Mode
 
 - **System default:** Follows device preference
-- **Toggle:** Can be switched programmatically (UI toggle not yet implemented)
+- **Theme selection:** User can choose between System, Light, or Dark theme via Settings screen
+- **Persistence:** Theme preference is saved using SharedPreferences and persists across app restarts
+- **Access:** Settings screen accessible from ChatListScreen AppBar
 
 ---
 
@@ -803,7 +836,7 @@ Potential improvements and features:
 - [ ] Message search
 - [ ] Message deletion
 - [x] Profile editing (username, bio, profile picture)
-- [ ] Theme toggle UI
+- [x] Theme toggle UI
 - [ ] Read receipts (detailed)
 - [ ] Message encryption
 
