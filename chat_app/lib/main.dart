@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'config/supabase_config.dart';
 import 'screens/auth_screen.dart';
-import 'screens/chat_list_screen.dart';
+import 'screens/main_screen.dart';
 import 'services/auth_service.dart';
 import 'services/theme_service.dart';
 import 'theme/app_theme.dart';
@@ -101,15 +101,15 @@ class _MyAppState extends State<MyApp> {
         switch (settings.name) {
           case '/':
             return _createRoute(
-              isAuthenticated ? const ChatListScreen() : const AuthScreen(),
+              isAuthenticated ? const MainScreen() : const AuthScreen(),
             );
           default:
             return _createRoute(
-              isAuthenticated ? const ChatListScreen() : const AuthScreen(),
+              isAuthenticated ? const MainScreen() : const AuthScreen(),
             );
         }
       },
-      home: isAuthenticated ? const ChatListScreen() : const AuthScreen(),
+      home: isAuthenticated ? const MainScreen() : const AuthScreen(),
     );
   }
 

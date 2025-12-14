@@ -180,3 +180,4 @@ class MessageBubbleShimmer extends StatelessWidget {
     );
   }
 }
+

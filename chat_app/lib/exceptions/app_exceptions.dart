@@ -216,6 +216,21 @@ class ProfileException extends AppException {
   }
 }
 
+/// Exception thrown when AI command processing fails.
+class AICommandException extends AppException {
+  const AICommandException(super.message, [super.cause]);
+
+  /// Creates an exception for failed intent extraction.
+  factory AICommandException.extractionFailed() {
+    return const AICommandException('Failed to extract message intent');
+  }
+
+  /// Creates an exception for recipient not found.
+  factory AICommandException.recipientNotFound() {
+    return const AICommandException('Recipient not found');
+  }
+}
+
 /// Utility class for parsing and handling exceptions.
 class ExceptionHandler {
   ExceptionHandler._();
@@ -265,6 +280,14 @@ class ExceptionHandler {
       return ProfileException.usernameTaken().message;
     }
 
+    // AI Command-related errors
+    if (errorStr.contains('ai') && errorStr.contains('command')) {
+      return AICommandException.extractionFailed().message;
+    }
+    if (errorStr.contains('recipient') && errorStr.contains('not found')) {
+      return AICommandException.recipientNotFound().message;
+    }
+
     // Clean up common prefixes
     return error
         .toString()
@@ -272,6 +295,7 @@ class ExceptionHandler {
         .replaceAll('AuthException: ', '')
         .replaceAll('PostgrestException: ', '')
         .replaceAll('StorageException: ', '')
-        .replaceAll('ProfileException: ', '');
+        .replaceAll('ProfileException: ', '')
+        .replaceAll('AICommandException: ', '');
   }
 }

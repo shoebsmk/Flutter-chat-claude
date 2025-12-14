@@ -113,3 +113,4 @@ echo ""
 echo "To integrate with ARCHITECTURE.md, you can:"
 echo "1. Manually copy relevant diagrams"
 echo "2. Or include them with: ![](docs/generated/project_structure.mmd)"
+
