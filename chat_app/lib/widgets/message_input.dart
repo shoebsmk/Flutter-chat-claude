@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 
 class MessageInput extends StatefulWidget {
@@ -45,6 +46,7 @@ class _MessageInputState extends State<MessageInput> {
 
   void _handleSend() {
     if (_hasText) {
+      HapticService.instance.mediumImpact();
       widget.onSend();
     }
   }

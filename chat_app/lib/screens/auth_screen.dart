@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'chat_list_screen.dart';
 import '../exceptions/app_exceptions.dart';
 import '../services/auth_service.dart';
+import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/constants.dart';
 
@@ -91,6 +92,8 @@ class _AuthScreenState extends State<AuthScreen> {
       }
 
       if (mounted) {
+        // Success haptic feedback
+        HapticService.instance.selectionClick();
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const ChatListScreen()),
         );

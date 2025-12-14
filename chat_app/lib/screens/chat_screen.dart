@@ -12,6 +12,7 @@ import '../widgets/message_bubble.dart';
 import '../widgets/message_input.dart';
 import '../widgets/loading_shimmer.dart';
 import '../widgets/user_avatar.dart';
+import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/constants.dart';
 import '../utils/date_utils.dart';
@@ -172,6 +173,9 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
+
+    // Haptic feedback on send
+    HapticService.instance.mediumImpact();
 
     try {
       await _chatService.sendMessage(
@@ -357,6 +361,9 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _handleDeleteMessage(Message message) async {
     if (message.id == null) return;
 
+    // Haptic feedback on delete action
+    HapticService.instance.heavyImpact();
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -383,6 +390,8 @@ class _ChatScreenState extends State<ChatScreen> {
     if (confirmed == true && mounted) {
       try {
         await _chatService.deleteMessage(message.id!);
+        // Success haptic feedback
+        HapticService.instance.selectionClick();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -482,29 +491,41 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildEmptyState(ThemeData theme) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 64,
-            color: theme.colorScheme.onSurface.withOpacity(0.3),
-          ),
-          const SizedBox(height: AppTheme.spacingL),
-          Text(
-            'No messages yet',
-            style: AppTheme.headingSmall.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingXL),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spacingXL),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.chat_bubble_outline,
+                size: 64,
+                color: theme.colorScheme.primary.withOpacity(0.6),
+              ),
             ),
-          ),
-          const SizedBox(height: AppTheme.spacingS),
-          Text(
-            'Start the conversation!',
-            style: AppTheme.bodyMedium.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
+            const SizedBox(height: AppTheme.spacingXL),
+            Text(
+              'No messages yet',
+              style: AppTheme.headingMedium.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+            const SizedBox(height: AppTheme.spacingS),
+            Text(
+              'Start the conversation!\nSend a message to ${widget.receiverName}.',
+              style: AppTheme.bodyMedium.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

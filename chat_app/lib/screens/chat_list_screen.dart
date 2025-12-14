@@ -14,6 +14,8 @@ import '../services/chat_service.dart';
 import '../services/presence_service.dart';
 import '../widgets/user_avatar.dart';
 import '../widgets/loading_shimmer.dart';
+import '../widgets/unread_badge.dart';
+import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/date_utils.dart';
 import '../utils/constants.dart';
@@ -448,53 +450,82 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   Widget _buildEmptyState(ThemeData theme) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 64,
-            color: theme.colorScheme.onSurface.withOpacity(0.3),
-          ),
-          const SizedBox(height: AppTheme.spacingL),
-          Text(
-            'No conversations yet',
-            style: AppTheme.headingSmall.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: AppTheme.spacingS),
-            child: Text(
-              'Start chatting with someone!',
-              style: AppTheme.bodyMedium.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingXL),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spacingXL),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.chat_bubble_outline,
+                size: 64,
+                color: theme.colorScheme.primary.withOpacity(0.6),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: AppTheme.spacingXL),
+            Text(
+              'No conversations yet',
+              style: AppTheme.headingMedium.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingS),
+            Text(
+              'Start chatting with someone!\nYour conversations will appear here.',
+              style: AppTheme.bodyMedium.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildNoSearchResults(ThemeData theme) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off,
-            size: 64,
-            color: theme.colorScheme.onSurface.withOpacity(0.3),
-          ),
-          const SizedBox(height: AppTheme.spacingL),
-          Text(
-            'No users found',
-            style: AppTheme.headingSmall.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spacingXL),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spacingXL),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.search_off,
+                size: 64,
+                color: theme.colorScheme.onSurface.withOpacity(0.4),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: AppTheme.spacingXL),
+            Text(
+              'No users found',
+              style: AppTheme.headingMedium.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingS),
+            Text(
+              'Try a different search term',
+              style: AppTheme.bodyMedium.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -534,59 +565,82 @@ class _ChatListItem extends StatelessWidget {
     final theme = Theme.of(context);
     final lastMessageText = lastMessage?.content ?? '';
     final lastMessageTime = lastMessage?.createdAt;
+    final hasUnread = unreadCount > 0;
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
+    return Container(
+      margin: const EdgeInsets.symmetric(
         horizontal: AppTheme.spacingM,
-        vertical: AppTheme.spacingS,
+        vertical: AppTheme.spacingXS,
       ),
-      leading: UserAvatar(
-        username: user.username,
-        imageUrl: user.avatarUrl,
-        size: 56,
-        showOnlineStatus: true,
-        isOnline: user.isOnline,
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              user.username,
-              style: AppTheme.bodyLarge.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusM),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
-          if (lastMessageTime != null)
-            Text(
-              AppDateUtils.formatRelative(lastMessageTime),
-              style: AppTheme.caption.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
-              ),
-            ),
         ],
       ),
-      subtitle: Text(
-        lastMessageText.isEmpty ? 'No messages yet' : lastMessageText,
-        style: AppTheme.bodySmall.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.6),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.spacingM,
+          vertical: AppTheme.spacingS,
         ),
-        overflow: TextOverflow.ellipsis,
-        maxLines: 1,
-      ),
-      trailing: unreadCount > 0
-          ? Container(
-              width: 12,
-              height: 12,
-              decoration: const BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusM),
+        ),
+        leading: UserAvatar(
+          username: user.username,
+          imageUrl: user.avatarUrl,
+          size: 56,
+          showOnlineStatus: true,
+          isOnline: user.isOnline,
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                user.username,
+                style: AppTheme.bodyLarge.copyWith(
+                  fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-            )
-          : null,
-      onTap: onTap,
+            ),
+            if (lastMessageTime != null)
+              Text(
+                AppDateUtils.formatRelative(lastMessageTime),
+                style: AppTheme.caption.copyWith(
+                  color: hasUnread
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface.withOpacity(0.5),
+                  fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+          ],
+        ),
+        subtitle: Text(
+          lastMessageText.isEmpty ? 'No messages yet' : lastMessageText,
+          style: AppTheme.bodySmall.copyWith(
+            color: hasUnread
+                ? theme.colorScheme.onSurface.withOpacity(0.8)
+                : theme.colorScheme.onSurface.withOpacity(0.6),
+            fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
+          ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+        trailing: unreadCount > 0
+            ? UnreadBadge(count: unreadCount)
+            : null,
+        onTap: () {
+          HapticService.instance.lightImpact();
+          onTap();
+        },
+      ),
     );
   }
 }

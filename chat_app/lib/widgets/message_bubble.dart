@@ -166,9 +166,16 @@ class _MessageBubbleState extends State<MessageBubble> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
                           offset: const Offset(0, 2),
+                          spreadRadius: 0,
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                          spreadRadius: 0,
                         ),
                       ],
                     ),
@@ -218,8 +225,8 @@ class _MessageBubbleState extends State<MessageBubble> {
                   padding: const EdgeInsets.only(left: AppTheme.spacingXS),
                   child: Icon(
                     Icons.done_all,
-                    size: 14,
-                    color: messageColor.withOpacity(0.6),
+                    size: 16,
+                    color: textColor.withOpacity(0.7),
                   ),
                 ),
             ],
