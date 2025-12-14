@@ -28,7 +28,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _messagesStream = Supabase.instance.client
         .from('messages')
         .stream(primaryKey: ['id'])
-        .order('created_at')
+        .order('created_at', ascending: false)
         .map(
           (data) => List<Map<String, dynamic>>.from(data)
               .where(
@@ -84,6 +84,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 }
 
                 return ListView.builder(
+                  reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final msg = messages[index];

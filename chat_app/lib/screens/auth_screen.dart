@@ -35,6 +35,22 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _emailController.text,
           password: _passwordController.text,
         );
+        final userId = Supabase.instance.client.auth.currentUser?.id;
+        if (userId != null) {
+          final existing = await Supabase.instance.client
+              .from('users')
+              .select('id')
+              .eq('id', userId)
+              .limit(1);
+          if (existing is List && existing.isEmpty) {
+            final email = _emailController.text;
+            final username = email.split('@').first;
+            await Supabase.instance.client.from('users').insert({
+              'id': userId,
+              'username': username,
+            });
+          }
+        }
       }
 
       if (mounted) {

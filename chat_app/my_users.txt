@@ -17,3 +17,9 @@ have email at the top when logged in
 Bug fixed - table was not populating
 Add chat screen
 
+
+
+
+
+
+flutter run --dart-define=SUPABASE_URL=https://djpzzwjxjlslnkgstgfk.supabase.co --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqcHp6d2p4amxzbG5rZ3N0Z2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNTI5ODYsImV4cCI6MjA4MDgyODk4Nn0.wQsV7inD7QjuAh-tgHUV6Z7jJUQ1PXPiQ4_ott_3raY
