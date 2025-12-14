@@ -8,6 +8,7 @@ import '../models/message.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../services/chat_service.dart';
+import '../services/presence_service.dart';
 import '../widgets/user_avatar.dart';
 import '../widgets/loading_shimmer.dart';
 import '../theme/app_theme.dart';
@@ -30,6 +31,7 @@ class _ChatListScreenState extends State<ChatListScreen>
   final _authService = AuthService();
   final _userService = UserService();
   final _chatService = ChatService();
+  final _presenceService = PresenceService();
 
   late Stream<List<User>> _usersStream;
   late Stream<List<Message>> _messagesStream;
@@ -47,6 +49,8 @@ class _ChatListScreenState extends State<ChatListScreen>
     WidgetsBinding.instance.addObserver(this);
     _initializeStreams();
     _setupSearchListener();
+    _presenceService.startHeartbeat();
+    _presenceService.updateLastSeen();
   }
 
   void _initializeStreams() {
@@ -69,12 +73,22 @@ class _ChatListScreenState extends State<ChatListScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
+    _presenceService.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _appLifecycleState = state;
+    if (state == AppLifecycleState.resumed) {
+      // Update last_seen when app comes to foreground
+      _presenceService.updateLastSeen();
+      _presenceService.startHeartbeat();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      // Stop heartbeat when app goes to background
+      _presenceService.stopHeartbeat();
+    }
   }
 
   Future<void> _playNotificationSound() async {
@@ -472,7 +486,7 @@ class _ChatListItem extends StatelessWidget {
         username: user.username,
         size: 56,
         showOnlineStatus: true,
-        isOnline: false, // TODO: Implement actual online status
+        isOnline: user.isOnline,
       ),
       title: Row(
         children: [

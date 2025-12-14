@@ -114,20 +114,19 @@ class ChatService {
   }
 
   /// Marks all unread messages from a specific sender as read.
+  /// Uses an RPC function to bypass RLS (receiver needs to update sender's messages).
   Future<int> markMessagesAsRead(String senderId) async {
     final userId = currentUserId;
     if (userId == null) return 0;
 
     try {
-      final response = await _client
-          .from('messages')
-          .update({'is_read': true})
-          .eq('sender_id', senderId)
-          .eq('receiver_id', userId)
-          .eq('is_read', false)
-          .select();
+      // Use RPC function to mark messages as read (bypasses RLS)
+      final response = await _client.rpc(
+        'mark_messages_as_read',
+        params: {'sender_user_id': senderId},
+      );
 
-      final count = (response as List).length;
+      final count = response as int? ?? 0;
       if (count > 0) {
         debugPrint('Marked $count messages as read');
       }

@@ -7,7 +7,11 @@ Basic chat app scaffold built with Flutter and Supabase, created using AI coding
 - Email/password authentication via Supabase Auth (`auth.users`)
 - Client-side sync of profiles into `public.users` after signup/signin
 - Streamed user list from Supabase (`public.users`)
-- Simple navigation to a placeholder chat screen
+- Real-time messaging with read receipts
+- Typing indicators
+- Online/offline status (presence tracking)
+- Unread message tracking
+- User search functionality
 
 ## Prerequisites
 

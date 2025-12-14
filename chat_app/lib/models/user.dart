@@ -12,11 +12,15 @@ class User {
   /// When the user was created.
   final DateTime? createdAt;
 
+  /// Last time the user was seen online.
+  final DateTime? lastSeen;
+
   const User({
     required this.id,
     required this.username,
     this.email,
     this.createdAt,
+    this.lastSeen,
   });
 
   /// Creates a User from a Supabase JSON response.
@@ -26,6 +30,7 @@ class User {
       username: json['username']?.toString() ?? 'Unknown',
       email: json['email']?.toString(),
       createdAt: _parseDateTime(json['created_at']),
+      lastSeen: _parseDateTime(json['last_seen']),
     );
   }
 
@@ -36,6 +41,7 @@ class User {
       'username': username,
       if (email != null) 'email': email,
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
+      if (lastSeen != null) 'last_seen': lastSeen!.toIso8601String(),
     };
   }
 
@@ -45,12 +51,14 @@ class User {
     String? username,
     String? email,
     DateTime? createdAt,
+    DateTime? lastSeen,
   }) {
     return User(
       id: id ?? this.id,
       username: username ?? this.username,
       email: email ?? this.email,
       createdAt: createdAt ?? this.createdAt,
+      lastSeen: lastSeen ?? this.lastSeen,
     );
   }
 
@@ -71,8 +79,16 @@ class User {
   @override
   int get hashCode => id.hashCode;
 
+  /// Returns true if the user is considered online (last seen within 1 minute).
+  bool get isOnline {
+    if (lastSeen == null) return false;
+    final now = DateTime.now();
+    final difference = now.difference(lastSeen!);
+    return difference.inMinutes < 1;
+  }
+
   @override
   String toString() {
-    return 'User(id: $id, username: $username, email: $email)';
+    return 'User(id: $id, username: $username, email: $email, lastSeen: $lastSeen)';
   }
 }
