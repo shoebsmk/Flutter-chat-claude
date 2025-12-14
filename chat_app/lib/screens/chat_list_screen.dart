@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'chat_screen.dart';
 import 'auth_screen.dart';
+import 'profile_edit_screen.dart';
 import '../models/user.dart' as models;
 import '../models/message.dart';
 import '../services/auth_service.dart';
@@ -228,6 +229,17 @@ class _ChatListScreenState extends State<ChatListScreen>
         ],
       ),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.person),
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ProfileEditScreen(),
+              ),
+            );
+          },
+          tooltip: 'Edit Profile',
+        ),
         IconButton(
           icon: const Icon(Icons.logout),
           onPressed: _handleLogout,
@@ -484,6 +496,7 @@ class _ChatListItem extends StatelessWidget {
       ),
       leading: UserAvatar(
         username: user.username,
+        imageUrl: user.avatarUrl,
         size: 56,
         showOnlineStatus: true,
         isOnline: user.isOnline,

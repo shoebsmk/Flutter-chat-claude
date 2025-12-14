@@ -137,6 +137,83 @@ class ValidationException extends AppException {
       field: field,
     );
   }
+  
+  /// Creates an exception for value too long.
+  factory ValidationException.tooLong(String field, int maxLength) {
+    return ValidationException(
+      '$field must be at most $maxLength characters',
+      field: field,
+    );
+  }
+}
+
+/// Exception thrown when a storage operation fails.
+class StorageException extends AppException {
+  const StorageException(super.message, [super.cause]);
+
+  /// Creates an exception for upload failures.
+  factory StorageException.uploadFailed([String? details]) {
+    final msg = details != null
+        ? 'Failed to upload image: $details'
+        : 'Failed to upload image. Please try again';
+    return StorageException(msg);
+  }
+
+  /// Creates an exception for deletion failures.
+  factory StorageException.deleteFailed([String? details]) {
+    final msg = details != null
+        ? 'Failed to delete image: $details'
+        : 'Failed to delete image';
+    return StorageException(msg);
+  }
+
+  /// Creates an exception for quota exceeded.
+  factory StorageException.quotaExceeded() {
+    return const StorageException(
+      'Storage quota exceeded. Please contact support',
+    );
+  }
+
+  /// Creates an exception for invalid file type.
+  factory StorageException.invalidFileType() {
+    return const StorageException(
+      'Invalid file type. Please select a JPEG, PNG, or WebP image',
+    );
+  }
+
+  /// Creates an exception for file too large.
+  factory StorageException.fileTooLarge(int maxSizeMB) {
+    return StorageException(
+      'File is too large. Maximum size is ${maxSizeMB}MB',
+    );
+  }
+}
+
+/// Exception thrown when a profile operation fails.
+class ProfileException extends AppException {
+  const ProfileException(super.message, [super.cause]);
+
+  /// Creates an exception for update failures.
+  factory ProfileException.updateFailed([String? details]) {
+    final msg = details != null
+        ? 'Failed to update profile: $details'
+        : 'Failed to update profile. Please try again';
+    return ProfileException(msg);
+  }
+
+  /// Creates an exception for username already taken.
+  factory ProfileException.usernameTaken() {
+    return const ProfileException(
+      'Username is already taken. Please choose another',
+    );
+  }
+
+  /// Creates an exception for username unavailable.
+  factory ProfileException.usernameUnavailable() {
+    return const ProfileException(
+      'Username is not available. Please choose another',
+    );
+  }
 }
 
 /// Utility class for parsing and handling exceptions.
@@ -174,11 +251,27 @@ class ExceptionHandler {
       return NetworkException.timeout().message;
     }
 
+    // Storage-related errors
+    if (errorStr.contains('storage') || errorStr.contains('bucket')) {
+      return StorageException.uploadFailed().message;
+    }
+    if (errorStr.contains('quota') || errorStr.contains('storage limit')) {
+      return StorageException.quotaExceeded().message;
+    }
+
+    // Profile-related errors
+    if (errorStr.contains('username') && 
+        (errorStr.contains('unique') || errorStr.contains('duplicate'))) {
+      return ProfileException.usernameTaken().message;
+    }
+
     // Clean up common prefixes
     return error
         .toString()
         .replaceAll('Exception: ', '')
         .replaceAll('AuthException: ', '')
-        .replaceAll('PostgrestException: ', '');
+        .replaceAll('PostgrestException: ', '')
+        .replaceAll('StorageException: ', '')
+        .replaceAll('ProfileException: ', '');
   }
 }

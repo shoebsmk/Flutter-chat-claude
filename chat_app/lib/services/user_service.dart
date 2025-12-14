@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user.dart' as models;
+import '../exceptions/app_exceptions.dart' as exceptions;
 
 /// Service for handling user-related operations.
 class UserService {
@@ -74,5 +76,124 @@ class UserService {
     return users
         .where((user) => user.username.toLowerCase().contains(lowerQuery))
         .toList();
+  }
+
+  /// Checks if a username is available.
+  ///
+  /// Returns true if the username is available, false if it's already taken.
+  /// If the username belongs to the current user, returns true.
+  Future<bool> checkUsernameAvailability(String username) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw exceptions.AuthException.notAuthenticated();
+    }
+
+    try {
+      final response = await _client
+          .from('users')
+          .select('id, username')
+          .eq('username', username.trim())
+          .limit(1)
+          .maybeSingle();
+
+      // If no user found, username is available
+      if (response == null) return true;
+
+      // If the username belongs to current user, it's available
+      final existingUserId = response['id']?.toString();
+      return existingUserId == userId;
+    } on PostgrestException catch (e) {
+      debugPrint('Error checking username availability: ${e.message}');
+      throw exceptions.DatabaseException.operationFailed('check username availability');
+    }
+  }
+
+  /// Updates the current user's profile.
+  ///
+  /// Updates username, bio, and/or avatar_url.
+  /// Throws [ProfileException] if update fails.
+  /// Throws [exceptions.ValidationException] if validation fails.
+  Future<models.User> updateProfile({
+    String? username,
+    String? bio,
+    String? avatarUrl,
+  }) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw exceptions.AuthException.notAuthenticated();
+    }
+
+    try {
+      // Build update map
+      final updateData = <String, dynamic>{};
+
+      if (username != null) {
+        final trimmed = username.trim();
+        if (trimmed.isEmpty) {
+          throw exceptions.ValidationException.required('username');
+        }
+        updateData['username'] = trimmed;
+      }
+
+      if (bio != null) {
+        final trimmed = bio.trim();
+        // Convert empty string to null
+        updateData['bio'] = trimmed.isEmpty ? null : trimmed;
+      }
+
+      if (avatarUrl != null) {
+        updateData['avatar_url'] = avatarUrl;
+      }
+
+      if (updateData.isEmpty) {
+        // No changes to make, return current user
+        final currentUser = await getCurrentUser();
+        if (currentUser == null) {
+          throw exceptions.DatabaseException.notFound('user');
+        }
+        return currentUser;
+      }
+
+      // Update database
+      final response = await _client
+          .from('users')
+          .update(updateData)
+          .eq('id', userId)
+          .select()
+          .single();
+
+      return models.User.fromJson(response);
+    } on PostgrestException catch (e) {
+      debugPrint('Error updating profile: ${e.message}');
+      
+      // Check for unique constraint violation (username taken)
+      if (e.message.contains('unique') || 
+          e.message.contains('duplicate') ||
+          e.message.contains('username')) {
+        throw exceptions.ProfileException.usernameTaken();
+      }
+      
+      throw exceptions.ProfileException.updateFailed(e.message);
+    }
+  }
+
+  /// Updates only the avatar URL in the database.
+  ///
+  /// Used after successful image upload.
+  Future<void> updateAvatarUrl(String avatarUrl) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw exceptions.AuthException.notAuthenticated();
+    }
+
+    try {
+      await _client
+          .from('users')
+          .update({'avatar_url': avatarUrl})
+          .eq('id', userId);
+    } on PostgrestException catch (e) {
+      debugPrint('Error updating avatar URL: ${e.message}');
+      throw exceptions.DatabaseException.operationFailed('update avatar URL');
+    }
   }
 }

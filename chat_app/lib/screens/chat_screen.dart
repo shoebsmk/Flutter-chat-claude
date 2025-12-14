@@ -255,6 +255,7 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               UserAvatar(
                 username: widget.receiverName,
+                imageUrl: user?.avatarUrl,
                 size: 36,
                 showOnlineStatus: true,
                 isOnline: isOnline,
@@ -415,6 +416,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           UserAvatar(
             username: widget.receiverName,
+            imageUrl: null, // Will be updated when user data is available
             size: 32,
             showOnlineStatus: false,
           ),

@@ -15,12 +15,24 @@ class User {
   /// Last time the user was seen online.
   final DateTime? lastSeen;
 
+  /// URL of the user's profile picture.
+  final String? avatarUrl;
+
+  /// Bio/description of the user.
+  final String? bio;
+
+  /// When the user's profile was last updated.
+  final DateTime? updatedAt;
+
   const User({
     required this.id,
     required this.username,
     this.email,
     this.createdAt,
     this.lastSeen,
+    this.avatarUrl,
+    this.bio,
+    this.updatedAt,
   });
 
   /// Creates a User from a Supabase JSON response.
@@ -31,6 +43,9 @@ class User {
       email: json['email']?.toString(),
       createdAt: _parseDateTime(json['created_at']),
       lastSeen: _parseDateTime(json['last_seen']),
+      avatarUrl: json['avatar_url']?.toString(),
+      bio: json['bio']?.toString(),
+      updatedAt: _parseDateTime(json['updated_at']),
     );
   }
 
@@ -42,6 +57,9 @@ class User {
       if (email != null) 'email': email,
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
       if (lastSeen != null) 'last_seen': lastSeen!.toIso8601String(),
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+      if (bio != null) 'bio': bio,
+      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
     };
   }
 
@@ -52,6 +70,9 @@ class User {
     String? email,
     DateTime? createdAt,
     DateTime? lastSeen,
+    String? avatarUrl,
+    String? bio,
+    DateTime? updatedAt,
   }) {
     return User(
       id: id ?? this.id,
@@ -59,6 +80,9 @@ class User {
       email: email ?? this.email,
       createdAt: createdAt ?? this.createdAt,
       lastSeen: lastSeen ?? this.lastSeen,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      bio: bio ?? this.bio,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -89,6 +113,6 @@ class User {
 
   @override
   String toString() {
-    return 'User(id: $id, username: $username, email: $email, lastSeen: $lastSeen)';
+    return 'User(id: $id, username: $username, email: $email, lastSeen: $lastSeen, avatarUrl: $avatarUrl, bio: $bio)';
   }
 }

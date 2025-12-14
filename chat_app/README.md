@@ -12,6 +12,7 @@ Basic chat app scaffold built with Flutter and Supabase, created using AI coding
 - Online/offline status (presence tracking)
 - Unread message tracking
 - User search functionality
+- Profile editing (username, bio, profile picture upload)
 
 ## Prerequisites
 
@@ -29,6 +30,13 @@ Basic chat app scaffold built with Flutter and Supabase, created using AI coding
    - Run the script, then verify `public.users` exists and is populated
 
 The script also backfills existing `auth.users` into `public.users` so previously registered users appear.
+
+4. **Profile Editing Setup:**
+   - Run the profile migration script for profile editing features:
+   - Open `chat_app/supabase_profile_migration.sql`
+   - Copy the contents into Supabase → SQL → New query
+   - Run the script to add `avatar_url`, `bio`, and `updated_at` columns
+   - This also creates the `profile-pictures` storage bucket with proper policies
 
 ### Optional: Enable RLS for `public.users`
 
@@ -82,6 +90,8 @@ On first launch:
 - Supabase init and session routing: `chat_app/lib/main.dart:8` and `chat_app/lib/main.dart:20`
 - Auth (sign up/sign in) and metadata: `chat_app/lib/screens/auth_screen.dart:21`
 - User list stream and navigation: `chat_app/lib/screens/chat_list_screen.dart:19`
+- Profile editing: `chat_app/lib/screens/profile_edit_screen.dart`
+- Profile service (image upload, validation): `chat_app/lib/services/profile_service.dart`
 
 ## Troubleshooting
 
@@ -90,8 +100,20 @@ On first launch:
   - Verify the trigger `on_auth_user_created` exists on `auth.users`
   - Check RLS policies allow `SELECT` on `public.users`
 
+- Profile editing not working:
+  - Ensure you ran `supabase_profile_migration.sql` to add profile columns
+  - Verify the `profile-pictures` storage bucket exists
+  - Check storage policies allow authenticated users to upload to their own folder
+  - On web, ensure you're using a modern browser (Chrome, Firefox, Edge)
+
+- Image upload fails:
+  - Check file size (max 5MB before compression)
+  - Verify image format (JPEG, PNG, WebP supported)
+  - On mobile, ensure camera/storage permissions are granted
+  - On web, no permissions needed (browser handles file access)
+
 - UID shown in AppBar:
-  - Update the title to `Text('Chats')` or fetch and display the current user’s `username`
+  - Update the title to `Text('Chats')` or fetch and display the current user's `username`
 
 ## Notes
 

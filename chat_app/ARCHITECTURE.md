@@ -23,6 +23,7 @@ This is a real-time chat application built with Flutter and Supabase. The app en
 - Typing indicators
 - Online/offline status (presence)
 - User search functionality
+- Profile editing (username, bio, profile picture)
 - Dark/Light theme support
 - Smooth animations and modern UI
 
@@ -71,6 +72,7 @@ graph TD
         AuthService[AuthService]
         ChatService[ChatService]
         UserService[UserService]
+        ProfileService[ProfileService]
         PresenceService[PresenceService]
         TypingService[TypingService]
     end
@@ -91,11 +93,13 @@ graph TD
     Screens --> AuthService
     Screens --> ChatService
     Screens --> UserService
+    Screens --> ProfileService
     Screens --> PresenceService
     Screens --> TypingService
     Widgets --> AuthService
     Widgets --> ChatService
     Widgets --> UserService
+    Widgets --> ProfileService
     Widgets --> PresenceService
     Widgets --> TypingService
     
@@ -249,9 +253,13 @@ stateDiagram-v2
 ```dart
 User {
   String id          // UUID from Supabase auth
-  String username    // Display name
+  String username    // Display name (3-50 chars)
   String? email      // Optional email
+  String? avatarUrl  // Profile picture URL
+  String? bio        // User bio (max 500 chars)
   DateTime? createdAt
+  DateTime? lastSeen
+  DateTime? updatedAt
 }
 ```
 
@@ -313,9 +321,32 @@ Message {
 - `getOtherUsersStream()` - Users excluding current user
 - `searchUsers()` - Search users by username
 - `getUserById()` - Fetch specific user
+- `updateProfile()` - Update user profile (username, bio, avatar)
+- `checkUsernameAvailability()` - Check if username is available
 
 **Dependencies:**
 - Supabase Client (database)
+
+#### ProfileService
+**Purpose:** Handles profile-related operations including image uploads
+
+**Key Methods:**
+- `uploadProfileImage()` - Upload profile picture to Supabase Storage
+- `deleteProfileImage()` - Delete profile picture from storage
+- `compressImage()` - Compress and optimize images (max 2000x2000px, 5MB)
+- `validateUsername()` - Validate username format (3-50 chars, alphanumeric + underscore/hyphen)
+- `validateBio()` - Validate bio length (max 500 chars)
+
+**Dependencies:**
+- Supabase Client (storage & database)
+- Image processing library
+- Platform-specific file handling
+
+**Features:**
+- Cross-platform image upload (web uses uploadBinary, mobile uses File)
+- Automatic image compression and optimization
+- Image validation (size, type, dimensions)
+- Error handling with rollback mechanisms
 
 #### PresenceService
 **Purpose:** Manages user online/offline status
@@ -393,6 +424,24 @@ Message {
 - Real-time message display
 - Message input with send button
 - Read status tracking
+
+#### ProfileEditScreen
+**Purpose:** User profile editing interface
+
+**Features:**
+- Edit username with real-time validation
+- Edit bio (optional, multiline, 500 char limit)
+- Upload/change profile picture (camera or gallery)
+- Remove profile picture
+- Username availability checking
+- Image compression and preview
+- Error handling with rollback
+
+**State Management:**
+- Local state with StatefulWidget
+- Form validation
+- Loading states
+- Error states
 - Message timestamps
 - Scroll to bottom on new messages
 
@@ -479,8 +528,14 @@ timeago: ^3.6.1                # Relative time formatting
 CREATE TABLE users (
   id UUID PRIMARY KEY REFERENCES auth.users(id),
   username TEXT NOT NULL,
+  avatar_url TEXT,
+  bio TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT check_username_length CHECK (LENGTH(username) >= 3 AND LENGTH(username) <= 50),
+  CONSTRAINT check_bio_length CHECK (bio IS NULL OR LENGTH(bio) <= 500),
+  CONSTRAINT users_username_key UNIQUE (username)
 );
 ```
 
@@ -702,6 +757,8 @@ AppTheme {
 ### Data Security
 - Row Level Security (RLS) should be configured on Supabase
 - User can only access their own messages
+- User can only update their own profile
+- Storage policies restrict profile picture uploads to user's own folder
 - User IDs verified on client and server
 
 ### Configuration
@@ -725,6 +782,13 @@ AppTheme {
 3. **Database:**
    - Indexed queries on `receiver_id` and `is_read`
    - Partial indexes for unread messages
+   - Unique constraint on username for fast availability checks
+   - Index on `avatar_url` for efficient queries
+
+4. **Image Optimization:**
+   - Automatic compression (max 2000x2000px, quality 85)
+   - JPEG format for smaller file sizes
+   - Progressive quality reduction if needed
 
 ---
 
@@ -738,8 +802,8 @@ Potential improvements and features:
 - [ ] Group chats
 - [ ] Message search
 - [ ] Message deletion
+- [x] Profile editing (username, bio, profile picture)
 - [ ] Theme toggle UI
-- [ ] Profile editing
 - [ ] Read receipts (detailed)
 - [ ] Message encryption
 

@@ -90,7 +90,7 @@ class UserAvatar extends StatelessWidget {
                     imageUrl!,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
-                      return _buildInitials(bgColor, theme);
+                      return _buildInitials(bgColor, Theme.of(context));
                     },
                   ),
                 )
