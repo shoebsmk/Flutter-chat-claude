@@ -24,6 +24,23 @@ class UserService {
         .map((data) => data.map((json) => models.User.fromJson(json)).toList());
   }
 
+  /// Fetches all users from the database.
+  ///
+  /// Used for manual refresh when real-time updates may not be received.
+  Future<List<models.User>> getAllUsers() async {
+    try {
+      final response = await _client
+          .from('users')
+          .select()
+          .order('created_at');
+      
+      return response.map((json) => models.User.fromJson(json)).toList();
+    } on PostgrestException catch (e) {
+      debugPrint('Error fetching all users: ${e.message}');
+      throw exceptions.DatabaseException.operationFailed('fetch users');
+    }
+  }
+
   /// Returns a stream of all users except the current user.
   Stream<List<models.User>> getOtherUsersStream() {
     final userId = currentUserId;

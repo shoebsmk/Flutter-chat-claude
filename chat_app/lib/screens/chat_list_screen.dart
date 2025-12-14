@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -36,6 +37,8 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   late Stream<List<User>> _usersStream;
   late Stream<List<Message>> _messagesStream;
+  final StreamController<List<User>> _usersStreamController = StreamController<List<User>>.broadcast();
+  StreamSubscription<List<User>>? _realtimeStreamSubscription;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   Map<String, int> _previousUnreadCounts = {};
@@ -55,8 +58,37 @@ class _ChatListScreenState extends State<ChatListScreen>
   }
 
   void _initializeStreams() {
-    _usersStream = _userService.getUsersStream();
+    // Use StreamController to combine real-time updates with manual refresh
+    // Real-time stream handles automatic updates from Supabase
+    // Manual refresh can inject fresh data into the same controller
+    _usersStream = _usersStreamController.stream;
     _messagesStream = _chatService.getCurrentUserMessagesStream();
+    
+    // Subscribe to real-time stream and forward events to our controller
+    final realtimeStream = _userService.getUsersStream();
+    _realtimeStreamSubscription = realtimeStream.listen(
+      (users) {
+        if (!_usersStreamController.isClosed) {
+          _usersStreamController.add(users);
+        }
+      },
+      onError: (error) {
+        debugPrint('Error in real-time users stream: $error');
+      },
+    );
+  }
+
+  /// Manually refreshes the users list by fetching fresh data from the database.
+  Future<void> _refreshUsers() async {
+    try {
+      final users = await _userService.getAllUsers();
+      if (!_usersStreamController.isClosed) {
+        _usersStreamController.add(users);
+      }
+    } catch (e) {
+      debugPrint('Error refreshing users: $e');
+      // Don't throw - let the stream handle errors
+    }
   }
 
   void _setupSearchListener() {
@@ -74,6 +106,8 @@ class _ChatListScreenState extends State<ChatListScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
+    _realtimeStreamSubscription?.cancel();
+    _usersStreamController.close();
     _presenceService.dispose();
     super.dispose();
   }
@@ -85,6 +119,8 @@ class _ChatListScreenState extends State<ChatListScreen>
       // Update last_seen when app comes to foreground
       _presenceService.updateLastSeen();
       _presenceService.startHeartbeat();
+      // Refresh users to get latest profile updates when app comes to foreground
+      _refreshUsers();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       // Stop heartbeat when app goes to background
@@ -336,9 +372,7 @@ class _ChatListScreenState extends State<ChatListScreen>
         }
 
         return RefreshIndicator(
-          onRefresh: () async {
-            _initializeStreams();
-          },
+          onRefresh: _refreshUsers,
           child: ListView.builder(
             itemCount: filteredUsers.length,
             itemBuilder: (context, index) {
@@ -378,9 +412,9 @@ class _ChatListScreenState extends State<ChatListScreen>
         ),
       ),
     );
-    // Refresh streams when returning from chat
+    // Refresh users when returning from chat to get latest profile updates
     if (mounted) {
-      _initializeStreams();
+      _refreshUsers();
     }
   }
 
