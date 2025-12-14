@@ -79,6 +79,34 @@ Adapt `main.dart` to read `const String.fromEnvironment('SUPABASE_URL')` and `co
   - `flutter pub get`
   - `flutter run`
 
+### Running on iOS Simulator
+
+To run the app on a specific iOS simulator device:
+
+1. **List available devices:**
+   ```bash
+   flutter devices
+   ```
+
+2. **Run on a specific iOS simulator:**
+   ```bash
+   cd <project-root-directory>
+   flutter run -d <device-id>
+   ```
+   
+   Example:
+   ```bash
+   cd "/Users/shoebmohammedkhan/Documents/Developer/Chat App github/Flutter-chat-claude/chat_app"
+   flutter run -d 2198D535-93C4-45D7-843B-3453AA3C5FF6
+   ```
+   
+   Replace `<project-root-directory>` with your project path and `<device-id>` with your target simulator's ID from `flutter devices`.
+
+3. **Interactive commands while running:**
+   - Press `r` for hot reload (quick code changes)
+   - Press `R` for hot restart (full app restart)
+   - Press `q` to quit the app
+
 On first launch:
 
 - Sign up with email/password and a username
