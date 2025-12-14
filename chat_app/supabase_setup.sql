@@ -78,3 +78,36 @@ $$;
 
 -- 11. Grant execute permission for update_last_seen
 GRANT EXECUTE ON FUNCTION update_last_seen() TO authenticated;
+
+-- 12. Add deleted_at column to messages table for message deletion
+ALTER TABLE messages 
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
+
+-- 13. Create index for efficient filtering of non-deleted messages
+CREATE INDEX IF NOT EXISTS idx_messages_deleted_at 
+ON messages(deleted_at) 
+WHERE deleted_at IS NULL;
+
+-- 14. RPC function to delete a message (bypasses RLS)
+-- This allows the sender to delete their own messages
+CREATE OR REPLACE FUNCTION delete_message(message_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE messages
+  SET deleted_at = timezone('utc'::text, now())
+  WHERE id = message_id
+    AND sender_id = auth.uid()
+    AND deleted_at IS NULL;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Message not found or you do not have permission to delete it';
+  END IF;
+END;
+$$;
+
+-- 15. Grant execute permission to authenticated users
+GRANT EXECUTE ON FUNCTION delete_message(UUID) TO authenticated;

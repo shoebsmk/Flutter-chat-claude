@@ -18,6 +18,9 @@ class Message {
   /// When the message was created.
   final DateTime createdAt;
 
+  /// When the message was deleted (null if not deleted).
+  final DateTime? deletedAt;
+
   const Message({
     this.id,
     required this.senderId,
@@ -25,6 +28,7 @@ class Message {
     required this.content,
     this.isRead = false,
     required this.createdAt,
+    this.deletedAt,
   });
 
   /// Creates a Message from a Supabase JSON response.
@@ -36,6 +40,7 @@ class Message {
       content: json['content']?.toString() ?? '',
       isRead: json['is_read'] as bool? ?? false,
       createdAt: _parseDateTime(json['created_at']) ?? DateTime.now(),
+      deletedAt: _parseDateTime(json['deleted_at']),
     );
   }
 
@@ -58,6 +63,7 @@ class Message {
     String? content,
     bool? isRead,
     DateTime? createdAt,
+    DateTime? deletedAt,
   }) {
     return Message(
       id: id ?? this.id,
@@ -66,6 +72,7 @@ class Message {
       content: content ?? this.content,
       isRead: isRead ?? this.isRead,
       createdAt: createdAt ?? this.createdAt,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -87,6 +94,9 @@ class Message {
   String getOtherUserId(String currentUserId) {
     return senderId == currentUserId ? receiverId : senderId;
   }
+
+  /// Returns true if this message has been deleted.
+  bool get isDeleted => deletedAt != null;
 
   @override
   bool operator ==(Object other) {

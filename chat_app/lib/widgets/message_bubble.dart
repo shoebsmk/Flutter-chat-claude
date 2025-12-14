@@ -10,6 +10,8 @@ class MessageBubble extends StatefulWidget {
   final String? senderName;
   final bool showAvatar;
   final bool showTimestamp;
+  final bool isDeletable;
+  final VoidCallback? onDelete;
 
   const MessageBubble({
     super.key,
@@ -19,6 +21,8 @@ class MessageBubble extends StatefulWidget {
     this.senderName,
     this.showAvatar = false,
     this.showTimestamp = true,
+    this.isDeletable = false,
+    this.onDelete,
   });
 
   @override
@@ -53,6 +57,41 @@ class _MessageBubbleState extends State<MessageBubble> {
     return DateFormat('MMM d, y h:mm a').format(dateTime);
   }
 
+  void _showDeleteOptions(BuildContext context) {
+    if (!widget.isDeletable || widget.onDelete == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Delete message'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  widget.onDelete?.call();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.cancel),
+                title: const Text('Cancel'),
+                onTap: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -75,7 +114,11 @@ class _MessageBubbleState extends State<MessageBubble> {
             top: AppTheme.spacingXS,
             bottom: AppTheme.spacingXS,
           ),
-          child: Row(
+          child: GestureDetector(
+            onLongPress: widget.isDeletable && widget.onDelete != null
+                ? () => _showDeleteOptions(context)
+                : null,
+            child: Row(
             mainAxisAlignment: widget.isMe
                 ? MainAxisAlignment.end
                 : MainAxisAlignment.start,
@@ -180,6 +223,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                   ),
                 ),
             ],
+          ),
           ),
         )
         .animate()

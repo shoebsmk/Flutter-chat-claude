@@ -26,7 +26,7 @@ class ChatService {
   final SupabaseClient _client;
 
   ChatService({SupabaseClient? client})
-    : _client = client ?? Supabase.instance.client;
+      : _client = client ?? Supabase.instance.client;
 
   /// Returns the current user's ID.
   String? get currentUserId => _client.auth.currentUser?.id;
@@ -51,6 +51,7 @@ class ChatService {
                     (msg['sender_id'] == otherUserId &&
                         msg['receiver_id'] == userId),
               )
+              .where((msg) => msg['deleted_at'] == null)
               .map((json) => Message.fromJson(json))
               .toList(),
         );
@@ -71,6 +72,7 @@ class ChatService {
                 (msg) =>
                     msg['sender_id'] == userId || msg['receiver_id'] == userId,
               )
+              .where((msg) => msg['deleted_at'] == null)
               .map((json) => Message.fromJson(json))
               .toList(),
         );
@@ -152,6 +154,9 @@ class ChatService {
     final unreadCountsByUser = <String, int>{};
 
     for (final msg in messages) {
+      // Skip deleted messages
+      if (msg.isDeleted) continue;
+
       // Determine the other user in this conversation
       String? otherUserId;
       if (msg.senderId == userId) {
@@ -208,8 +213,42 @@ class ChatService {
         .select('id')
         .eq('sender_id', senderId)
         .eq('receiver_id', userId)
-        .eq('is_read', false);
+        .eq('is_read', false)
+        .isFilter('deleted_at', null);
 
     return (response as List).length;
+  }
+
+  /// Deletes a message by setting its deleted_at timestamp.
+  ///
+  /// Only the message sender can delete their own messages.
+  /// Uses an RPC function to bypass RLS (similar to mark_messages_as_read).
+  /// Throws [exceptions.AuthException] if not authenticated.
+  /// Throws [exceptions.ChatException] if the message doesn't exist, is already deleted, or user is not the sender.
+  Future<void> deleteMessage(String messageId) async {
+    final userId = currentUserId;
+    if (userId == null) {
+      throw exceptions.AuthException.notAuthenticated();
+    }
+
+    try {
+      // Use RPC function to delete message (bypasses RLS)
+      await _client.rpc(
+        'delete_message',
+        params: {'message_id': messageId},
+      );
+    } on PostgrestException catch (e) {
+      debugPrint('Database error deleting message: ${e.message}');
+      if (e.code == 'PGRST116') {
+        throw exceptions.ChatException('Message not found');
+      }
+      throw exceptions.ChatException('Failed to delete message: ${e.message}');
+    } catch (e) {
+      if (e is exceptions.ChatException || e is exceptions.AuthException) {
+        rethrow;
+      }
+      debugPrint('Error deleting message: $e');
+      throw exceptions.ChatException('Failed to delete message');
+    }
   }
 }

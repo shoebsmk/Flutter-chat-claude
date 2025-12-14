@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../exceptions/app_exceptions.dart';
 import '../models/message.dart';
 import '../models/user.dart';
@@ -33,17 +34,30 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  // Services
   final _authService = AuthService();
   final _chatService = ChatService();
   final _typingService = TypingService();
   final _userService = UserService();
+
+  // Controllers
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+
+  // Streams
   late Stream<List<Message>> _messagesStream;
+  StreamSubscription<bool>? _typingStreamSubscription;
+
+  // Typing indicator state
   Timer? _typingDebounceTimer;
   Timer? _typingAnimationTimer;
   bool _isOtherUserTyping = false;
   int _typingAnimationFrame = 0;
+
+  // Constants
+  static const Duration _typingDebounceDuration = Duration(seconds: 2);
+  static const Duration _typingAnimationInterval = Duration(milliseconds: 400);
+  static const int _typingDotCount = 3;
 
   String? get _currentUserId => _authService.currentUserId;
 
@@ -56,56 +70,76 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.addListener(_onTextChanged);
   }
 
+  /// Sets up the typing indicator stream listener.
+  ///
+  /// Listens for typing status changes from the other user and updates
+  /// the UI accordingly, including starting/stopping the animation.
   void _setupTypingListener() {
-    _typingService.getTypingStream(widget.receiverId).listen((isTyping) {
-      if (mounted) {
-        setState(() {
-          _isOtherUserTyping = isTyping;
-        });
-        if (isTyping) {
-          _startTypingAnimation();
-        } else {
-          _stopTypingAnimation();
-        }
-      }
-    });
+    _typingStreamSubscription?.cancel();
+    _typingStreamSubscription = _typingService
+        .getTypingStream(widget.receiverId)
+        .listen(
+          (isTyping) {
+            if (!mounted) return;
+
+            setState(() {
+              _isOtherUserTyping = isTyping;
+            });
+
+            if (isTyping) {
+              _startTypingAnimation();
+            } else {
+              _stopTypingAnimation();
+            }
+          },
+          onError: (error) {
+            debugPrint('Error in typing stream: $error');
+          },
+        );
   }
 
+  /// Starts the typing indicator animation.
+  ///
+  /// Creates a periodic timer that cycles through animation frames
+  /// to create a wave effect on the typing dots.
   void _startTypingAnimation() {
     _stopTypingAnimation();
     _typingAnimationTimer = Timer.periodic(
-      const Duration(milliseconds: 400),
+      _typingAnimationInterval,
       (_) {
         if (mounted && _isOtherUserTyping) {
           setState(() {
-            _typingAnimationFrame = (_typingAnimationFrame + 1) % 3;
+            _typingAnimationFrame = (_typingAnimationFrame + 1) % _typingDotCount;
           });
         }
       },
     );
   }
 
+  /// Stops the typing indicator animation and resets the frame.
   void _stopTypingAnimation() {
     _typingAnimationTimer?.cancel();
     _typingAnimationTimer = null;
     _typingAnimationFrame = 0;
   }
 
+  /// Handles text input changes to manage typing indicator.
+  ///
+  /// Starts typing indicator when user types, stops when input is empty,
+  /// and automatically stops after a debounce period of no input.
   void _onTextChanged() {
-    // Cancel previous timer
     _typingDebounceTimer?.cancel();
-    
-    // Start typing indicator
-    if (_messageController.text.trim().isNotEmpty) {
+
+    final hasText = _messageController.text.trim().isNotEmpty;
+    if (hasText) {
       _typingService.startTyping(widget.receiverId);
+      // Stop typing after debounce period of no input
+      _typingDebounceTimer = Timer(_typingDebounceDuration, () {
+        _typingService.stopTyping(widget.receiverId);
+      });
     } else {
       _typingService.stopTyping(widget.receiverId);
     }
-    
-    // Stop typing after 2 seconds of no input
-    _typingDebounceTimer = Timer(const Duration(seconds: 2), () {
-      _typingService.stopTyping(widget.receiverId);
-    });
   }
 
   void _initializeMessagesStream() {
@@ -119,13 +153,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    // Remove text controller listener and dispose
     _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
     _scrollController.dispose();
+
+    // Clean up typing indicator resources
     _typingDebounceTimer?.cancel();
     _stopTypingAnimation();
+    _typingStreamSubscription?.cancel();
     _typingService.stopTyping(widget.receiverId);
     _typingService.dispose();
+
     super.dispose();
   }
 
@@ -202,11 +241,15 @@ class _ChatScreenState extends State<ChatScreen> {
         builder: (context, snapshot) {
           final user = snapshot.data;
           final isOnline = user?.isOnline ?? false;
-          final statusText = isOnline
-              ? 'Online'
-              : user?.lastSeen != null
-                  ? 'Last seen ${AppDateUtils.formatRelative(user!.lastSeen)}'
-                  : 'Offline';
+          
+          // Show "Typing..." if user is typing, otherwise show online/offline status
+          final statusText = _isOtherUserTyping
+              ? 'Typing...'
+              : isOnline
+                  ? 'Online'
+                  : user?.lastSeen != null
+                      ? 'Last seen ${AppDateUtils.formatRelative(user!.lastSeen)}'
+                      : 'Offline';
 
           return Row(
             children: [
@@ -302,7 +345,64 @@ class _ChatScreenState extends State<ChatScreen> {
       isMe: isMe,
       senderName: isMe ? null : widget.receiverName,
       showAvatar: showAvatar,
+      isDeletable: isMe && !message.isDeleted,
+      onDelete: isMe && !message.isDeleted
+          ? () => _handleDeleteMessage(message)
+          : null,
     );
+  }
+
+  /// Handles message deletion with confirmation dialog.
+  Future<void> _handleDeleteMessage(Message message) async {
+    if (message.id == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete message'),
+        content: const Text(
+          'Are you sure you want to delete this message? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await _chatService.deleteMessage(message.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Message deleted'),
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(ExceptionHandler.getMessage(e)),
+              backgroundColor: AppTheme.errorLight,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Widget _buildTypingIndicator(ThemeData theme) {
@@ -321,8 +421,8 @@ class _ChatScreenState extends State<ChatScreen> {
           const SizedBox(width: AppTheme.spacingS),
           Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacingM,
-              vertical: AppTheme.spacingS,
+              horizontal: 12,
+              vertical: 8,
             ),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceVariant,
@@ -331,27 +431,11 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '${widget.receiverName} is typing',
-                  style: AppTheme.bodySmall.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(width: AppTheme.spacingS),
-                SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildTypingDot(theme, 0),
-                      const SizedBox(width: 3),
-                      _buildTypingDot(theme, 1),
-                      const SizedBox(width: 3),
-                      _buildTypingDot(theme, 2),
-                    ],
-                  ),
-                ),
+                _buildTypingDot(theme, 0),
+                const SizedBox(width: 3),
+                _buildTypingDot(theme, 1),
+                const SizedBox(width: 3),
+                _buildTypingDot(theme, 2),
               ],
             ),
           ),
@@ -360,11 +444,14 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  /// Builds a single typing indicator dot with animated opacity.
+  ///
+  /// Creates a wave effect by varying opacity based on the current
+  /// animation frame and the dot's index.
   Widget _buildTypingDot(ThemeData theme, int index) {
-    // Calculate opacity based on animation frame - creates a wave effect
-    final frameOffset = (index - _typingAnimationFrame) % 3;
+    final frameOffset = (index - _typingAnimationFrame) % _typingDotCount;
     final opacity = frameOffset == 0 ? 1.0 : (frameOffset == 1 ? 0.5 : 0.3);
-    
+
     return Container(
       width: 6,
       height: 6,
