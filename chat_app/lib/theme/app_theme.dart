@@ -10,7 +10,7 @@ class AppTheme {
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color errorLight = Color(0xFFEF4444);
   static const Color successLight = Color(0xFF10B981);
-  
+
   // Color Palette - Dark Theme
   static const Color primaryDarkTheme = Color(0xFF818CF8);
   static const Color secondaryDarkTheme = Color(0xFFA78BFA);
@@ -18,19 +18,19 @@ class AppTheme {
   static const Color surfaceDark = Color(0xFF1E293B);
   static const Color errorDark = Color(0xFFF87171);
   static const Color successDark = Color(0xFF34D399);
-  
+
   // Text Colors
   static const Color textPrimaryLight = Color(0xFF1F2937);
   static const Color textSecondaryLight = Color(0xFF6B7280);
   static const Color textPrimaryDark = Color(0xFFF9FAFB);
   static const Color textSecondaryDark = Color(0xFFD1D5DB);
-  
+
   // Message Colors
   static const Color messageSentLight = Color(0xFF6366F1);
   static const Color messageReceivedLight = Color(0xFFE5E7EB);
   static const Color messageSentDark = Color(0xFF6366F1);
   static const Color messageReceivedDark = Color(0xFF334155);
-  
+
   // Spacing System (4px grid)
   static const double spacingXS = 4.0;
   static const double spacingS = 8.0;
@@ -38,7 +38,7 @@ class AppTheme {
   static const double spacingL = 24.0;
   static const double spacingXL = 32.0;
   static const double spacingXXL = 48.0;
-  
+
   // Border Radius
   static const double radiusXS = 4.0;
   static const double radiusS = 8.0;
@@ -46,50 +46,38 @@ class AppTheme {
   static const double radiusL = 16.0;
   static const double radiusXL = 24.0;
   static const double radiusFull = 9999.0;
-  
+
   // Typography
-  static TextStyle get headingLarge => GoogleFonts.inter(
-    fontSize: 32,
-    fontWeight: FontWeight.bold,
-    height: 1.2,
-  );
-  
-  static TextStyle get headingMedium => GoogleFonts.inter(
-    fontSize: 24,
-    fontWeight: FontWeight.bold,
-    height: 1.3,
-  );
-  
-  static TextStyle get headingSmall => GoogleFonts.inter(
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    height: 1.4,
-  );
-  
+  static TextStyle get headingLarge =>
+      GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.bold, height: 1.2);
+
+  static TextStyle get headingMedium =>
+      GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, height: 1.3);
+
+  static TextStyle get headingSmall =>
+      GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600, height: 1.4);
+
   static TextStyle get bodyLarge => GoogleFonts.inter(
     fontSize: 16,
     fontWeight: FontWeight.normal,
     height: 1.5,
   );
-  
+
   static TextStyle get bodyMedium => GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.normal,
     height: 1.5,
   );
-  
+
   static TextStyle get bodySmall => GoogleFonts.inter(
     fontSize: 12,
     fontWeight: FontWeight.normal,
     height: 1.5,
   );
-  
-  static TextStyle get caption => GoogleFonts.inter(
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-    height: 1.4,
-  );
-  
+
+  static TextStyle get caption =>
+      GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400, height: 1.4);
+
   // Light Theme
   static ThemeData get lightTheme {
     return ThemeData(
@@ -110,9 +98,7 @@ class AppTheme {
         backgroundColor: surfaceLight,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: headingSmall.copyWith(
-          color: textPrimaryLight,
-        ),
+        titleTextStyle: headingSmall.copyWith(color: textPrimaryLight),
         iconTheme: const IconThemeData(color: textPrimaryLight),
       ),
       cardTheme: CardThemeData(
@@ -158,17 +144,13 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusM),
           ),
-          textStyle: bodyMedium.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: bodyMedium.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primaryLight,
-          textStyle: bodyMedium.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: bodyMedium.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       textTheme: TextTheme(
@@ -184,7 +166,7 @@ class AppTheme {
       ),
     );
   }
-  
+
   // Dark Theme
   static ThemeData get darkTheme {
     return ThemeData(
@@ -205,9 +187,7 @@ class AppTheme {
         backgroundColor: surfaceDark,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: headingSmall.copyWith(
-          color: textPrimaryDark,
-        ),
+        titleTextStyle: headingSmall.copyWith(color: textPrimaryDark),
         iconTheme: const IconThemeData(color: textPrimaryDark),
       ),
       cardTheme: CardThemeData(
@@ -253,17 +233,13 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusM),
           ),
-          textStyle: bodyMedium.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: bodyMedium.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: primaryDarkTheme,
-          textStyle: bodyMedium.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: bodyMedium.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
       textTheme: TextTheme(
@@ -280,4 +256,3 @@ class AppTheme {
     );
   }
 }
-

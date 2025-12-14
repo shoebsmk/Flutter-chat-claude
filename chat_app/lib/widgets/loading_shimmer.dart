@@ -9,14 +9,10 @@ class LoadingShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Shimmer.fromColors(
-      baseColor: isDark
-          ? Colors.grey.shade800
-          : Colors.grey.shade300,
-      highlightColor: isDark
-          ? Colors.grey.shade700
-          : Colors.grey.shade100,
+      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
       child: _ShimmerContent(),
     );
   }
@@ -25,9 +21,7 @@ class LoadingShimmer extends StatelessWidget {
 class _ShimmerContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: List.generate(5, (index) => _ShimmerListItem()),
-    );
+    return Column(children: List.generate(5, (index) => _ShimmerListItem()));
   }
 }
 
@@ -87,14 +81,10 @@ class ChatListShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Shimmer.fromColors(
-      baseColor: isDark
-          ? Colors.grey.shade800
-          : Colors.grey.shade300,
-      highlightColor: isDark
-          ? Colors.grey.shade700
-          : Colors.grey.shade100,
+      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
       child: ListView.builder(
         itemCount: 8,
         itemBuilder: (context, index) {
@@ -157,24 +147,17 @@ class ChatListShimmer extends StatelessWidget {
 
 class MessageBubbleShimmer extends StatelessWidget {
   final bool isMe;
-  
-  const MessageBubbleShimmer({
-    super.key,
-    this.isMe = false,
-  });
+
+  const MessageBubbleShimmer({super.key, this.isMe = false});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Shimmer.fromColors(
-      baseColor: isDark
-          ? Colors.grey.shade800
-          : Colors.grey.shade300,
-      highlightColor: isDark
-          ? Colors.grey.shade700
-          : Colors.grey.shade100,
+      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
       child: Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
@@ -197,4 +180,3 @@ class MessageBubbleShimmer extends StatelessWidget {
     );
   }
 }
-

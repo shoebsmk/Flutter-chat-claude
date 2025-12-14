@@ -1,25 +1,14 @@
+My notes
 
+Users for testing:
+user1: email: shoebsmk@gmail.com | password: Demo1234
+user2: email: shoebwm@gmail.com | password: Demo5678 | username: Khan
+user3: email: xatofin741@alexida.com | password: Demo2345 | username: alexida
+user4: email: getiqisi@forexzig.com | password: Testuser4 | username: getiqisi
+user5: email: dohysosy@denipl.net | password: Testuser5 | username: dohysosy (verification required)
+user6: email: lozygu@denipl.net | password: Testuser6 | username: lozygu
+user7: email: gufubo@denipl.com | password: Testuser7 | username: gufubo
+user8: email: webohuju@denipl.com | password: Testuser8 | username: webohuju
 
-
-user1: email:shoebsmk@gmail.com password: Demo1234
-user2 email:shoebwm@gmail.com password: Demo5678 username:Khan
-user3 email:xatofin741@alexida.com password: Demo2345 username:alexida
-user4: email:getiqisi@forexzig.com password: Testuser4 username:getiqisi
-
-// verification reqd
-user5: email:dohysosy@denipl.net password: Testuser5 username:dohysosy
-
-
-user6: email:lozygu@denipl.net password: Testuser6 username:lozygu
-user7: email:gufubo@denipl.com password: Testuser7 username:gufubo
-To do:
-have email at the top when logged in
-Bug fixed - table was not populating
-Add chat screen
-
-
-
-
-
-
+For running the app:
 flutter run --dart-define=SUPABASE_URL=https://djpzzwjxjlslnkgstgfk.supabase.co --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqcHp6d2p4amxzbG5rZ3N0Z2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNTI5ODYsImV4cCI6MjA4MDgyODk4Nn0.wQsV7inD7QjuAh-tgHUV6Z7jJUQ1PXPiQ4_ott_3raY

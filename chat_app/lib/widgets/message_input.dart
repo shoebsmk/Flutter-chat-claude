@@ -81,9 +81,7 @@ class _MessageInputState extends State<MessageInput> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isDark
-                    ? AppTheme.surfaceDark
-                    : AppTheme.surfaceLight,
+                color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
                 shape: BoxShape.circle,
               ),
               child: IconButton(
@@ -105,9 +103,7 @@ class _MessageInputState extends State<MessageInput> {
               child: Container(
                 constraints: const BoxConstraints(maxHeight: 100),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? AppTheme.surfaceDark
-                      : AppTheme.surfaceLight,
+                  color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
                   borderRadius: BorderRadius.circular(AppTheme.radiusXL),
                   border: Border.all(
                     color: theme.dividerColor.withOpacity(0.2),
@@ -140,31 +136,31 @@ class _MessageInputState extends State<MessageInput> {
             const SizedBox(width: AppTheme.spacingS),
             // Send button
             AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _hasText
-                    ? AppTheme.primaryLight
-                    : theme.colorScheme.surface,
-                shape: BoxShape.circle,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _hasText ? _handleSend : null,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Icon(
-                    Icons.send_rounded,
-                    size: 20,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
                     color: _hasText
-                        ? Colors.white
-                        : theme.colorScheme.onSurface.withOpacity(0.3),
+                        ? AppTheme.primaryLight
+                        : theme.colorScheme.surface,
+                    shape: BoxShape.circle,
                   ),
-                ),
-              ),
-            )
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _hasText ? _handleSend : null,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Icon(
+                        Icons.send_rounded,
+                        size: 20,
+                        color: _hasText
+                            ? Colors.white
+                            : theme.colorScheme.onSurface.withOpacity(0.3),
+                      ),
+                    ),
+                  ),
+                )
                 .animate(target: _hasText ? 1 : 0)
                 .scale(
                   begin: const Offset(0.9, 0.9),
@@ -177,4 +173,3 @@ class _MessageInputState extends State<MessageInput> {
     );
   }
 }
-

@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'config/supabase_config.dart';
 import 'screens/auth_screen.dart';
 import 'screens/chat_list_screen.dart';
+import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
+import 'utils/constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: 'https://djpzzwjxjlslnkgstgfk.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqcHp6d2p4amxzbG5rZ3N0Z2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNTI5ODYsImV4cCI6MjA4MDgyODk4Nn0.wQsV7inD7QjuAh-tgHUV6Z7jJUQ1PXPiQ4_ott_3raY',
-  );
+  await SupabaseConfig.initialize();
 
   runApp(const MyApp());
 }
@@ -25,8 +23,12 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.system;
+  final _authService = AuthService();
 
-  void _toggleTheme() {
+  /// Toggles between light and dark theme.
+  /// Can be exposed to UI when theme toggle is implemented.
+  // ignore: unused_element
+  void toggleTheme() {
     setState(() {
       if (_themeMode == ThemeMode.light) {
         _themeMode = ThemeMode.dark;
@@ -41,6 +43,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final isAuthenticated = _authService.isAuthenticated;
+
     return MaterialApp(
       title: 'Chat App',
       theme: AppTheme.lightTheme,
@@ -51,21 +55,15 @@ class _MyAppState extends State<MyApp> {
         switch (settings.name) {
           case '/':
             return _createRoute(
-              Supabase.instance.client.auth.currentSession == null
-                  ? const AuthScreen()
-                  : const ChatListScreen(),
+              isAuthenticated ? const ChatListScreen() : const AuthScreen(),
             );
           default:
             return _createRoute(
-              Supabase.instance.client.auth.currentSession == null
-                  ? const AuthScreen()
-                  : const ChatListScreen(),
+              isAuthenticated ? const ChatListScreen() : const AuthScreen(),
             );
         }
       },
-      home: Supabase.instance.client.auth.currentSession == null
-          ? const AuthScreen()
-          : const ChatListScreen(),
+      home: isAuthenticated ? const ChatListScreen() : const AuthScreen(),
     );
   }
 
@@ -77,19 +75,17 @@ class _MyAppState extends State<MyApp> {
         const end = Offset.zero;
         const curve = Curves.easeOut;
 
-        var tween = Tween(begin: begin, end: end).chain(
-          CurveTween(curve: curve),
-        );
+        var tween = Tween(
+          begin: begin,
+          end: end,
+        ).chain(CurveTween(curve: curve));
 
         return SlideTransition(
           position: animation.drive(tween),
-          child: FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+          child: FadeTransition(opacity: animation, child: child),
         );
       },
-      transitionDuration: const Duration(milliseconds: 300),
+      transitionDuration: AppConstants.animationSlow,
     );
   }
 }

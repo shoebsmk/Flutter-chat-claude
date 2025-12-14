@@ -60,126 +60,130 @@ class _MessageBubbleState extends State<MessageBubble> {
 
     final messageColor = widget.isMe
         ? (isDark ? AppTheme.messageSentDark : AppTheme.messageSentLight)
-        : (isDark ? AppTheme.messageReceivedDark : AppTheme.messageReceivedLight);
+        : (isDark
+              ? AppTheme.messageReceivedDark
+              : AppTheme.messageReceivedLight);
 
     final textColor = widget.isMe
         ? Colors.white
         : (isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight);
 
     return Padding(
-      padding: EdgeInsets.only(
-        left: widget.isMe ? AppTheme.spacingL : AppTheme.spacingS,
-        right: widget.isMe ? AppTheme.spacingS : AppTheme.spacingL,
-        top: AppTheme.spacingXS,
-        bottom: AppTheme.spacingXS,
-      ),
-      child: Row(
-        mainAxisAlignment:
-            widget.isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!widget.isMe && widget.showAvatar)
-            Padding(
-              padding: const EdgeInsets.only(right: AppTheme.spacingS),
-              child: CircleAvatar(
-                radius: 12,
-                backgroundColor: AppTheme.primaryLight,
-                child: Text(
-                  widget.senderName?.substring(0, 1).toUpperCase() ?? '?',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          Flexible(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _showFullTimestamp = !_showFullTimestamp;
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.spacingM,
-                  vertical: AppTheme.spacingS,
-                ),
-                decoration: BoxDecoration(
-                  color: messageColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(AppTheme.radiusM),
-                    topRight: const Radius.circular(AppTheme.radiusM),
-                    bottomLeft: Radius.circular(
-                      widget.isMe ? AppTheme.radiusM : AppTheme.radiusXS,
-                    ),
-                    bottomRight: Radius.circular(
-                      widget.isMe ? AppTheme.radiusXS : AppTheme.radiusM,
-                    ),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (!widget.isMe && widget.senderName != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppTheme.spacingXS),
-                        child: Text(
-                          widget.senderName!,
-                          style: TextStyle(
-                            color: textColor.withOpacity(0.8),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    Text(
-                      widget.content,
-                      style: AppTheme.bodyMedium.copyWith(
-                        color: textColor,
-                      ),
-                    ),
-                    if (widget.showTimestamp)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppTheme.spacingXS),
-                        child: Text(
-                          _showFullTimestamp
-                              ? _getFullTimestamp(widget.createdAt)
-                              : _formatTimestamp(widget.createdAt),
-                          style: TextStyle(
-                            color: textColor.withOpacity(0.7),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
+          padding: EdgeInsets.only(
+            left: widget.isMe ? AppTheme.spacingL : AppTheme.spacingS,
+            right: widget.isMe ? AppTheme.spacingS : AppTheme.spacingL,
+            top: AppTheme.spacingXS,
+            bottom: AppTheme.spacingXS,
           ),
-          if (widget.isMe)
-            Padding(
-              padding: const EdgeInsets.only(left: AppTheme.spacingXS),
-              child: Icon(
-                Icons.done_all,
-                size: 14,
-                color: messageColor.withOpacity(0.6),
+          child: Row(
+            mainAxisAlignment: widget.isMe
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!widget.isMe && widget.showAvatar)
+                Padding(
+                  padding: const EdgeInsets.only(right: AppTheme.spacingS),
+                  child: CircleAvatar(
+                    radius: 12,
+                    backgroundColor: AppTheme.primaryLight,
+                    child: Text(
+                      widget.senderName?.substring(0, 1).toUpperCase() ?? '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              Flexible(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showFullTimestamp = !_showFullTimestamp;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingM,
+                      vertical: AppTheme.spacingS,
+                    ),
+                    decoration: BoxDecoration(
+                      color: messageColor,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(AppTheme.radiusM),
+                        topRight: const Radius.circular(AppTheme.radiusM),
+                        bottomLeft: Radius.circular(
+                          widget.isMe ? AppTheme.radiusM : AppTheme.radiusXS,
+                        ),
+                        bottomRight: Radius.circular(
+                          widget.isMe ? AppTheme.radiusXS : AppTheme.radiusM,
+                        ),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!widget.isMe && widget.senderName != null)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppTheme.spacingXS,
+                            ),
+                            child: Text(
+                              widget.senderName!,
+                              style: TextStyle(
+                                color: textColor.withOpacity(0.8),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        Text(
+                          widget.content,
+                          style: AppTheme.bodyMedium.copyWith(color: textColor),
+                        ),
+                        if (widget.showTimestamp)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              top: AppTheme.spacingXS,
+                            ),
+                            child: Text(
+                              _showFullTimestamp
+                                  ? _getFullTimestamp(widget.createdAt)
+                                  : _formatTimestamp(widget.createdAt),
+                              style: TextStyle(
+                                color: textColor.withOpacity(0.7),
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-        ],
-      ),
-    )
+              if (widget.isMe)
+                Padding(
+                  padding: const EdgeInsets.only(left: AppTheme.spacingXS),
+                  child: Icon(
+                    Icons.done_all,
+                    size: 14,
+                    color: messageColor.withOpacity(0.6),
+                  ),
+                ),
+            ],
+          ),
+        )
         .animate()
         .fadeIn(duration: 200.ms)
         .slideY(begin: 0.1, end: 0, duration: 200.ms, curve: Curves.easeOut);
   }
 }
-

@@ -32,10 +32,10 @@ class UserAvatar extends StatelessWidget {
 
   Color _getBackgroundColor(BuildContext context) {
     if (backgroundColor != null) return backgroundColor!;
-    
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     // Generate a color based on username hash for consistency
     if (username != null && username!.isNotEmpty) {
       final hash = username!.hashCode;
@@ -58,7 +58,7 @@ class UserAvatar extends StatelessWidget {
             ];
       return colors[hash.abs() % colors.length];
     }
-    
+
     return isDark ? AppTheme.primaryDarkTheme : AppTheme.primaryLight;
   }
 
@@ -66,7 +66,7 @@ class UserAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bgColor = _getBackgroundColor(context);
-    
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -105,9 +105,7 @@ class UserAvatar extends StatelessWidget {
               height: size * 0.3,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isOnline
-                    ? AppTheme.successLight
-                    : Colors.grey.shade400,
+                color: isOnline ? AppTheme.successLight : Colors.grey.shade400,
                 border: Border.all(
                   color: theme.scaffoldBackgroundColor,
                   width: 2,
@@ -132,4 +130,3 @@ class UserAvatar extends StatelessWidget {
     );
   }
 }
-
