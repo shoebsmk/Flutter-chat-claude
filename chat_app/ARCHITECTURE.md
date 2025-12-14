@@ -24,6 +24,7 @@ This is a real-time chat application built with Flutter and Supabase. The app en
 - Online/offline status (presence)
 - User search functionality
 - Profile editing (username, bio, profile picture)
+- **AI-powered command-based messaging** - Send messages using natural language commands
 - Dark/Light theme support
 - Smooth animations and modern UI
 
@@ -47,6 +48,11 @@ graph TB
         DB[(PostgreSQL<br/>Database)]
         Realtime[Realtime<br/>Subscriptions]
         Storage[Storage<br/>Optional]
+        EdgeFunctions[Edge Functions<br/>AI Intent Extraction]
+    end
+    
+    subgraph "External Services"
+        GeminiAPI[Google Gemini API<br/>AI Processing]
     end
     
     UI --> Services
@@ -55,8 +61,10 @@ graph TB
     Config --> Auth
     Config --> DB
     Config --> Realtime
+    Config --> EdgeFunctions
     Auth --> DB
     Realtime --> DB
+    EdgeFunctions --> GeminiAPI
 ```
 
 ### Layered Architecture
@@ -64,7 +72,7 @@ graph TB
 ```mermaid
 graph TD
     subgraph "Presentation Layer"
-        Screens[Screens<br/>Auth, ChatList, Chat]
+        Screens[Screens<br/>Auth, MainScreen, ChatList, Chat, AIAssistant]
         Widgets[Widgets<br/>MessageBubble, UserAvatar, etc]
     end
     
@@ -75,6 +83,7 @@ graph TD
         ProfileService[ProfileService]
         PresenceService[PresenceService]
         TypingService[TypingService]
+        AICommandService[AICommandService]
     end
     
     subgraph "Model Layer"
@@ -87,7 +96,8 @@ graph TD
     end
     
     subgraph "External Services"
-        SupabaseBackend[Supabase Backend<br/>Auth, Database, Realtime]
+        SupabaseBackend[Supabase Backend<br/>Auth, Database, Realtime, Edge Functions]
+        GeminiAPI[Google Gemini API<br/>AI Processing]
     end
     
     Screens --> AuthService
@@ -96,6 +106,7 @@ graph TD
     Screens --> ProfileService
     Screens --> PresenceService
     Screens --> TypingService
+    Screens --> AICommandService
     Widgets --> AuthService
     Widgets --> ChatService
     Widgets --> UserService
@@ -110,10 +121,13 @@ graph TD
     AuthService --> SupabaseConfig
     ChatService --> SupabaseConfig
     UserService --> SupabaseConfig
+    ProfileService --> SupabaseConfig
     PresenceService --> SupabaseConfig
     TypingService --> SupabaseConfig
+    AICommandService --> SupabaseConfig
     
     SupabaseConfig --> SupabaseBackend
+    SupabaseBackend --> GeminiAPI
 ```
 
 ---
@@ -132,8 +146,10 @@ lib/
 │   └── message.dart            # Message data model
 ├── screens/
 │   ├── auth_screen.dart        # Authentication screen
+│   ├── main_screen.dart        # Main container with bottom navigation
 │   ├── chat_list_screen.dart   # List of conversations
 │   ├── chat_screen.dart        # Individual chat screen
+│   ├── ai_assistant_screen.dart # AI command interface
 │   ├── profile_edit_screen.dart # Profile editing screen
 │   └── settings_screen.dart    # App settings screen
 ├── services/
@@ -142,6 +158,7 @@ lib/
 │   ├── user_service.dart       # User management logic
 │   ├── presence_service.dart   # Online/offline status management
 │   ├── typing_service.dart     # Typing indicators management
+│   ├── ai_command_service.dart # AI intent extraction and recipient resolution
 │   └── theme_service.dart      # Theme preference persistence
 ├── theme/
 │   └── app_theme.dart          # App theming
@@ -153,6 +170,12 @@ lib/
     ├── message_bubble.dart     # Individual message widget
     ├── message_input.dart      # Message input field
     └── user_avatar.dart        # User avatar widget
+
+supabase/
+└── functions/
+    └── extract-message-intent/
+        ├── index.ts            # Edge Function for AI intent extraction
+        └── README.md           # Function documentation
 ```
 
 ### Directory Responsibilities
@@ -167,6 +190,7 @@ lib/
 | `theme/` | App-wide theming and styling |
 | `utils/` | Helper functions and constants |
 | `widgets/` | Reusable UI components |
+| `supabase/functions/` | Supabase Edge Functions (serverless functions) |
 
 ---
 
@@ -238,16 +262,47 @@ stateDiagram-v2
     [*] --> MainApp
     MainApp --> CheckAuth
     CheckAuth --> AuthScreen: Not authenticated
-    CheckAuth --> ChatListScreen: Authenticated
-    AuthScreen --> ChatListScreen: Login successful
+    CheckAuth --> MainScreen: Authenticated
+    AuthScreen --> MainScreen: Login successful
+    MainScreen --> ChatListScreen: Chats tab
+    MainScreen --> AIAssistantScreen: AI Assistant tab
     ChatListScreen --> ChatScreen: Select conversation
     ChatListScreen --> SettingsScreen: Settings button
     ChatListScreen --> ProfileEditScreen: Profile button
-    ChatScreen --> ChatListScreen: Back navigation
-    SettingsScreen --> ChatListScreen: Back navigation
-    ProfileEditScreen --> ChatListScreen: Back navigation
-    ChatListScreen --> AuthScreen: Logout
+    AIAssistantScreen --> ChatScreen: After sending message
+    ChatScreen --> MainScreen: Back navigation
+    SettingsScreen --> MainScreen: Back navigation
+    ProfileEditScreen --> MainScreen: Back navigation
+    MainScreen --> AuthScreen: Logout
     AuthScreen --> [*]
+```
+
+### AI Command Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant AIAssistantScreen
+    participant AICommandService
+    participant EdgeFunction
+    participant GeminiAPI
+    participant UserService
+    participant ChatService
+
+    User->>AIAssistantScreen: Type command "Send Ahmed I'll be late"
+    AIAssistantScreen->>AICommandService: extractIntent(command)
+    AICommandService->>EdgeFunction: POST /extract-message-intent
+    EdgeFunction->>GeminiAPI: Extract recipient & message
+    GeminiAPI-->>EdgeFunction: {"recipient_query": "Ahmed", "message": "I'll be late"}
+    EdgeFunction-->>AICommandService: Intent data
+    AICommandService->>UserService: Search for recipient
+    UserService-->>AICommandService: User object
+    AICommandService-->>AIAssistantScreen: Intent + Recipient
+    AIAssistantScreen->>AIAssistantScreen: Show confirmation dialog
+    User->>AIAssistantScreen: Confirm send
+    AIAssistantScreen->>ChatService: sendMessage(receiverId, message)
+    ChatService->>ChatService: Message sent
+    AIAssistantScreen->>AIAssistantScreen: Navigate to chat
 ```
 
 ---
@@ -391,6 +446,22 @@ Message {
 - Filters typing status by conversation participants
 - Validates typing status freshness (within 5 seconds)
 
+#### AICommandService
+**Purpose:** Handles AI-powered intent extraction and recipient resolution
+
+**Key Methods:**
+- `extractIntent(String command)` - Calls Supabase Edge Function to extract recipient and message from natural language
+- `resolveRecipient(String query, List<User> users)` - Finds matching user from recipient query
+
+**Dependencies:**
+- Supabase Client (Edge Functions)
+
+**Features:**
+- Natural language command parsing via Google Gemini API
+- Automatic recipient matching (exact, partial, fuzzy)
+- Error handling for extraction failures
+- Returns structured intent data (recipient_query, message)
+
 #### ThemeService
 **Purpose:** Manages theme preference persistence
 
@@ -424,6 +495,18 @@ Message {
 - Form validation
 - Loading states
 
+#### MainScreen
+**Purpose:** Main container screen with bottom navigation
+
+**Features:**
+- Bottom navigation bar with two tabs: Chats and AI Assistant
+- Tab switching between ChatListScreen and AIAssistantScreen
+- Maintains navigation state
+
+**State Management:**
+- Local state with StatefulWidget
+- Index-based tab navigation
+
 #### ChatListScreen
 **Purpose:** Display list of conversations
 
@@ -439,6 +522,22 @@ Message {
 - StreamBuilder for real-time updates
 - Combined streams (users + messages)
 - Search filtering
+
+#### AIAssistantScreen
+**Purpose:** AI-powered command interface for natural language messaging
+
+**Features:**
+- Natural language command input
+- AI intent extraction via Edge Function
+- Recipient resolution and confirmation dialog
+- Message sending with user confirmation
+- Error handling and loading states
+- Example command hints
+
+**State Management:**
+- Local state with StatefulWidget
+- Loading states during AI processing
+- Error states for failed extractions
 
 #### ChatScreen
 **Purpose:** Individual conversation interface
@@ -535,11 +634,17 @@ Message {
   - **Auth:** Email/password authentication
   - **Database:** PostgreSQL (via Supabase)
   - **Realtime:** WebSocket-based real-time subscriptions
+  - **Edge Functions:** Serverless functions for AI intent extraction
+
+### External Services
+- **Google Gemini API:** Natural language processing for command extraction
+  - Model: `gemini-1.5-flash` (primary, with fallback to `gemini-pro`)
+  - Automatic model fallback for reliability
 
 ### Key Dependencies
 
 ```yaml
-supabase_flutter: ^2.0.0      # Backend integration
+supabase_flutter: ^2.0.0      # Backend integration (includes Edge Functions)
 intl: ^0.19.0                  # Internationalization
 google_fonts: ^6.1.0           # Typography
 shimmer: ^3.0.0                # Loading animations
@@ -547,6 +652,12 @@ flutter_animate: ^4.5.0        # UI animations
 timeago: ^3.6.1                # Relative time formatting
 shared_preferences: ^2.2.2     # Local storage for preferences
 ```
+
+**Supabase Edge Functions:**
+- `extract-message-intent`: AI intent extraction using Google Gemini API
+  - Language: TypeScript (Deno runtime)
+  - External API: Google Gemini API
+  - Features: Model fallback, CORS support, input validation
 
 ---
 
@@ -735,9 +846,12 @@ AppException (abstract)
 │   └── emailInUse()
 ├── NetworkException
 ├── DatabaseException
-└── ChatException
-    ├── emptyMessage()
-    └── sendFailed()
+├── ChatException
+│   ├── emptyMessage()
+│   └── sendFailed()
+└── AICommandException
+    ├── extractionFailed()
+    └── recipientNotFound()
 ```
 
 ### Error Flow
@@ -837,8 +951,12 @@ Potential improvements and features:
 - [ ] Message deletion
 - [x] Profile editing (username, bio, profile picture)
 - [x] Theme toggle UI
+- [x] AI-powered command-based messaging
 - [ ] Read receipts (detailed)
 - [ ] Message encryption
+- [ ] Multiple recipient support in AI commands
+- [ ] Scheduled messages via AI commands
+- [ ] Command history for AI Assistant
 
 ---
 
@@ -858,6 +976,19 @@ flutter run --dart-define=SUPABASE_URL=your_url \
 ### Database Setup
 
 Run the SQL script `supabase_setup.sql` in your Supabase SQL editor to set up the required tables and indexes.
+
+### AI Command Feature Setup
+
+1. Get a Gemini API key from https://aistudio.google.com/app/apikey
+2. Set the API key in Supabase Edge Functions secrets:
+   ```bash
+   supabase secrets set GEMINI_API_KEY=your_key_here
+   ```
+3. Deploy the Edge Function:
+   ```bash
+   supabase functions deploy extract-message-intent
+   ```
+4. See `DEPLOYMENT_GUIDE.md` and `supabase/functions/extract-message-intent/README.md` for detailed instructions.
 
 ### Project Configuration
 

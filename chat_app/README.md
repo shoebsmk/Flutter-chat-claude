@@ -31,6 +31,7 @@ Basic chat app scaffold built with Flutter and Supabase, created using AI coding
 - Unread message tracking
 - User search functionality
 - Profile editing (username, bio, profile picture upload)
+- **AI-powered command-based messaging** - Send messages using natural language commands like "Send Ahmed I'll be late"
 
 ## Prerequisites
 
@@ -103,6 +104,16 @@ For detailed setup instructions, continue reading below.
    - Copy the contents into Supabase → SQL Editor → New query
    - Run the script to add `avatar_url`, `bio`, and `updated_at` columns
    - This also creates the `profile-pictures` storage bucket with proper policies
+
+5. **AI Command Feature Setup (Optional):**
+   - Get a Gemini API key from https://aistudio.google.com/app/apikey
+   - Set the API key in Supabase:
+     - Go to Project Settings → Edge Functions → Secrets
+     - Add `GEMINI_API_KEY` with your API key value
+   - Deploy the Edge Function:
+     - Using CLI: `supabase functions deploy extract-message-intent`
+     - Or via Dashboard: Edge Functions → Deploy new function
+   - See `DEPLOYMENT_GUIDE.md` and `supabase/functions/extract-message-intent/README.md` for details
 
 #### Optional: Enable RLS for `public.users`
 
@@ -410,6 +421,12 @@ Key files and their purposes:
   - `lib/screens/profile_edit_screen.dart` - Profile editing UI
   - `lib/services/profile_service.dart` - Image upload, validation, and profile updates
 
+- **AI command messaging:**
+  - `lib/screens/main_screen.dart` - Main container with bottom navigation (Chats & AI Assistant tabs)
+  - `lib/screens/ai_assistant_screen.dart` - AI command interface for natural language messaging
+  - `lib/services/ai_command_service.dart` - AI intent extraction and recipient resolution
+  - `supabase/functions/extract-message-intent/` - Edge Function for AI intent extraction (uses Google Gemini API)
+
 - **Real-time features:**
   - `lib/services/presence_service.dart` - Online/offline status tracking
   - `lib/services/typing_service.dart` - Typing indicators
@@ -471,6 +488,13 @@ Key files and their purposes:
   - On mobile, ensure camera/storage permissions are granted
   - On web, no permissions needed (browser handles file access)
 
+- **AI command feature not working:**
+  - Verify `GEMINI_API_KEY` secret is set in Supabase Edge Functions
+  - Ensure the `extract-message-intent` Edge Function is deployed
+  - Check Edge Function logs in Supabase dashboard for errors
+  - Verify your Gemini API key is valid and has quota remaining
+  - See `DEPLOYMENT_GUIDE.md` for detailed setup instructions
+
 - **UID shown in AppBar:**
   - Update the title to `Text('Chats')` or fetch and display the current user's `username`
 
@@ -478,6 +502,10 @@ Key files and their purposes:
 
 - **Sample credentials:** `chat_app/my_users.txt` (for testing flows)
 - **Architecture documentation:** See `ARCHITECTURE.md` for detailed system design
+- **AI command feature:** 
+  - Implementation details: `docs/AI_COMMAND_MESSAGING_PLAN.md`
+  - Deployment guide: `DEPLOYMENT_GUIDE.md`
+  - Edge Function README: `supabase/functions/extract-message-intent/README.md`
 - **Feature suggestions:** See `docs/FEATURE_SUGGESTIONS.md` for potential enhancements
 - **Security best practices:**
   - Do not commit secrets to version control

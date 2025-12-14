@@ -77,4 +77,20 @@ Run `npx supabase login` first
 - Check that GEMINI_API_KEY is set correctly
 - Verify the Edge Function is deployed
 - Check Edge Function logs in Supabase dashboard
+- The function uses automatic model fallback, so check logs for which models were attempted
+
+### "AI service not configured"
+- Ensure `GEMINI_API_KEY` secret is set in Supabase
+- Verify the secret name is exactly `GEMINI_API_KEY` (case-sensitive)
+
+## Edge Function Features
+
+The deployed Edge Function includes:
+- **Automatic Model Fallback**: Tries multiple Gemini API versions/models for reliability
+- **Input Validation**: Commands limited to 500 characters
+- **CORS Support**: Handles cross-origin requests
+- **Robust Error Handling**: Clear error messages and appropriate HTTP status codes
+- **JSON Parsing**: Handles various response formats including markdown code blocks
+
+See `supabase/functions/extract-message-intent/README.md` for complete documentation.
 

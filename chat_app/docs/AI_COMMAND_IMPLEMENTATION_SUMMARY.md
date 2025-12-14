@@ -22,10 +22,13 @@ All components of the AI-powered command-based messaging feature have been succe
 
 4. **`supabase/functions/extract-message-intent/index.ts`**
    - Supabase Edge Function for intent extraction
-   - Uses Google Gemini API
+   - Uses Google Gemini API with automatic model fallback
+   - Includes CORS support, input validation, and robust error handling
 
 5. **`supabase/functions/extract-message-intent/README.md`**
-   - Deployment and setup instructions
+   - Comprehensive deployment and setup instructions
+   - API documentation with examples
+   - Troubleshooting guide
 
 ### Modified Files
 
@@ -109,10 +112,31 @@ Flutter App
 - [ ] Verify messages appear in chat list
 - [ ] Test bottom navigation switching
 
+## Implementation Details
+
+### Edge Function Features
+
+- **Model Fallback Strategy**: Automatically tries multiple Gemini API configurations for reliability:
+  1. `gemini-1.5-flash` with API v1
+  2. `gemini-1.5-flash` with API v1beta
+  3. `gemini-pro` with API v1
+  4. `gemini-pro` with API v1beta
+- **CORS Support**: Handles cross-origin requests properly
+- **Input Validation**: Command length limited to 500 characters
+- **Robust JSON Parsing**: Handles markdown code blocks and various response formats
+- **Comprehensive Error Handling**: Clear error messages with appropriate HTTP status codes
+
+### Cost & Performance
+
+- **Primary Model**: `gemini-1.5-flash` (fast and cost-effective)
+- **Fallback Models**: `gemini-pro` (used only if flash fails)
+- **Estimated Cost**: ~$0.00001 per request
+- **Free Tier**: 60 requests/minute (Gemini free tier)
+- **Response Time**: Typically 1-3 seconds
+
 ## Notes
 
-- The feature uses `gemini-1.5-flash` model for cost efficiency
-- Estimated cost: ~$0.00001 per request
-- Free tier: 60 requests/minute
 - Multiple recipient matches currently return the first match (can be enhanced later)
+- All API keys are stored securely in Supabase Edge Function secrets
+- The function includes comprehensive logging for debugging
 
