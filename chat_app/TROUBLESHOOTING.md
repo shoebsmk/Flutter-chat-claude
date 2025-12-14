@@ -101,3 +101,5 @@ The updated Edge Function now provides more detailed error messages. Check:
 3. Ensure you're using the correct Supabase project
 4. Check if there are any rate limits on your Gemini API key
 
+
+

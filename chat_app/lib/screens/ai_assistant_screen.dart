@@ -345,7 +345,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                       bottom: AppTheme.spacingM + MediaQuery.of(context).padding.bottom,
                     ),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: TextField(
@@ -389,33 +389,39 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                           ),
                         ),
                         const SizedBox(width: AppTheme.spacingS),
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _isProcessing ? null : _processCommand,
-                              borderRadius: BorderRadius.circular(24),
-                              child: Center(
-                                child: _isProcessing
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                        ),
-                                      )
-                                    : const Icon(
-                                        Icons.send,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: _isProcessing ? null : _processCommand,
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: Center(
+                                    child: _isProcessing
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.send,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),

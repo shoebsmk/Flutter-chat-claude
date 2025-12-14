@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_animate/flutter_animate.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
@@ -55,13 +56,14 @@ class _MessageInputState extends State<MessageInput> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        bottom: kIsWeb ? AppTheme.spacingM : viewInsets + AppTheme.spacingS,
         left: AppTheme.spacingM,
         right: AppTheme.spacingM,
-        top: AppTheme.spacingS,
+        top: AppTheme.spacingM,
       ),
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
@@ -76,7 +78,7 @@ class _MessageInputState extends State<MessageInput> {
       child: SafeArea(
         top: false,
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Attachment button (placeholder)
             Container(
