@@ -7,7 +7,7 @@ A full-featured AI-assisted real-time chat application built with Flutter and Su
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
-- [Deploy to Vercel](#deploy-to-vercel) 🚀
+- [Deploy to GitHub Pages](#deploy-to-github-pages) 🚀
 - [Setup](#setup)
   - [Supabase Setup](#supabase-setup)
   - [App Configuration](#app-configuration)
@@ -96,19 +96,21 @@ For experienced developers who want to get started quickly:
 
 > **Note:** For first-time setup, see the detailed [Setup](#setup) section below. For AI features, see [AI Command Feature Setup](#5-ai-command-feature-setup-optional).
 
-## Deploy to Vercel
+## Deploy to GitHub Pages
 
 Ready to deploy your Flutter web app? Follow the quick start guide:
 
-👉 **[DEPLOY_TO_VERCEL.md](DEPLOY_TO_VERCEL.md)** - Step-by-step deployment instructions
+👉 **[DEPLOY_TO_GITHUB_PAGES.md](DEPLOY_TO_GITHUB_PAGES.md)** - Step-by-step deployment instructions
 
 **Quick Summary:**
 1. Get your Supabase URL and anon key
-2. Connect your Git repository to Vercel
-3. Add environment variables (`SUPABASE_URL`, `SUPABASE_ANON_KEY`)
-4. Deploy!
+2. Configure GitHub Secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`)
+3. Enable GitHub Pages in repository settings
+4. Push to main branch - deployment is automatic!
 
-For detailed information, see [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md).
+Your app will be available at: **https://shoebsmk.github.io/Flutter-chat-claude/**
+
+**Note:** The GitHub Actions workflow automatically builds and deploys your app whenever you push to the main branch.
 
 ## Setup
 
@@ -600,7 +602,7 @@ Key files and their purposes:
 - **Edge Function README:** `supabase/functions/extract-message-intent/README.md`
 
 ### Web Deployment
-- **Vercel deployment:** See `VERCEL_DEPLOYMENT.md` for complete guide on deploying the Flutter web app to Vercel
+- **GitHub Pages deployment:** See `DEPLOY_TO_GITHUB_PAGES.md` for complete guide on deploying the Flutter web app to GitHub Pages
 
 ### Development Resources
 - **Sample credentials:** `chat_app/my_users.txt` (for testing flows)
