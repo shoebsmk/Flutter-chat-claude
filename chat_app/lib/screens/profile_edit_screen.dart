@@ -260,7 +260,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Profile'),
+        elevation: 0,
+        title: Text(
+          'Edit Profile',
+          style: AppTheme.headingSmall.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           if (_isLoading)
             const Padding(
@@ -272,13 +278,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ),
             )
           else
-            TextButton(
-              onPressed: _saveProfile,
-              child: const Text(
-                'Save',
-                style: TextStyle(
-                  color: AppTheme.primaryLight,
-                  fontWeight: FontWeight.w600,
+            Padding(
+              padding: const EdgeInsets.only(right: AppTheme.spacingS),
+              child: TextButton(
+                onPressed: _saveProfile,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacingL,
+                    vertical: AppTheme.spacingS,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusM),
+                  ),
+                ),
+                child: Text(
+                  'Save',
+                  style: AppTheme.bodyMedium.copyWith(
+                    color: AppTheme.primaryLight,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -286,24 +304,42 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       ),
       body: _currentUser == null
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(AppTheme.spacingXL),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppTheme.spacingL),
-                    _buildImagePicker(),
-                    const SizedBox(height: AppTheme.spacingXXL),
-                    if (_errorMessage != null) _buildErrorMessage(),
-                    _buildUsernameField(),
-                    const SizedBox(height: AppTheme.spacingL),
-                    _buildBioField(),
-                    const SizedBox(height: AppTheme.spacingXL),
-                  ],
-                ),
-              ),
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
+                return SingleChildScrollView(
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                    left: AppTheme.spacingXL,
+                    right: AppTheme.spacingXL,
+                    top: AppTheme.spacingXL,
+                    bottom: AppTheme.spacingXL + keyboardPadding,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: AppTheme.spacingXL),
+                        _buildImagePicker(),
+                        const SizedBox(height: AppTheme.spacingXXL),
+                        if (_errorMessage != null) ...[
+                          _buildErrorMessage(),
+                          const SizedBox(height: AppTheme.spacingL),
+                        ],
+                        _buildFormCard(
+                          children: [
+                            _buildUsernameField(),
+                            const SizedBox(height: AppTheme.spacingXL),
+                            _buildBioField(),
+                          ],
+                        ),
+                        SizedBox(height: AppTheme.spacingXXL + keyboardPadding),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
     );
   }
@@ -311,7 +347,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget _buildImagePicker() {
     return ImagePickerWidget(
       currentImageUrl: _originalAvatarUrl,
-      size: 120,
+      size: 220,
       onImageSelected: (image) {
         setState(() {
           _selectedImage = image;
@@ -327,20 +363,29 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget _buildErrorMessage() {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingM),
-      margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
       decoration: BoxDecoration(
         color: AppTheme.errorLight.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(AppTheme.radiusM),
+        borderRadius: BorderRadius.circular(AppTheme.radiusL),
         border: Border.all(color: AppTheme.errorLight.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.errorLight.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: AppTheme.errorLight, size: 20),
+          const Icon(Icons.error_outline, color: AppTheme.errorLight, size: 22),
           const SizedBox(width: AppTheme.spacingS),
           Expanded(
             child: Text(
               _errorMessage!,
-              style: AppTheme.bodySmall.copyWith(color: AppTheme.errorLight),
+              style: AppTheme.bodyMedium.copyWith(
+                color: AppTheme.errorLight,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -348,56 +393,115 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
-  Widget _buildUsernameField() {
-    return TextFormField(
-      controller: _usernameController,
-      textInputAction: TextInputAction.next,
-      enabled: !_isLoading,
-      decoration: InputDecoration(
-        labelText: 'Username',
-        prefixIcon: const Icon(Icons.person_outlined),
-        suffixIcon: _isCheckingUsername
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            : _isUsernameAvailable && _usernameController.text.isNotEmpty
-                ? const Icon(Icons.check_circle, color: AppTheme.successLight)
-                : null,
-        helperText: '${_usernameController.text.length}/${AppConstants.maxUsernameLength}',
+  Widget _buildFormCard({required List<Widget> children}) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingXL),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusL),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
       ),
-      validator: _validateUsername,
-      onChanged: (value) {
-        // Debounce username check
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted && _usernameController.text == value) {
-            _checkUsernameAvailability(value);
-          }
-        });
-      },
-      inputFormatters: [
-        LengthLimitingTextInputFormatter(AppConstants.maxUsernameLength),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildUsernameField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Username',
+          style: AppTheme.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacingS),
+        TextFormField(
+          controller: _usernameController,
+          textInputAction: TextInputAction.next,
+          enabled: !_isLoading,
+          style: AppTheme.bodyLarge,
+          decoration: InputDecoration(
+            hintText: 'Enter your username',
+            prefixIcon: const Icon(Icons.person_outlined),
+            suffixIcon: _isCheckingUsername
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : _isUsernameAvailable && _usernameController.text.isNotEmpty
+                    ? const Icon(Icons.check_circle, color: AppTheme.successLight)
+                    : null,
+            helperText: '${_usernameController.text.length}/${AppConstants.maxUsernameLength}',
+            helperStyle: AppTheme.bodySmall.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          validator: _validateUsername,
+          onChanged: (value) {
+            // Debounce username check
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted && _usernameController.text == value) {
+                _checkUsernameAvailability(value);
+              }
+            });
+          },
+          inputFormatters: [
+            LengthLimitingTextInputFormatter(AppConstants.maxUsernameLength),
+          ],
+        ),
       ],
     );
   }
 
   Widget _buildBioField() {
-    return TextFormField(
-      controller: _bioController,
-      maxLines: 4,
-      maxLength: AppConstants.maxBioLength,
-      enabled: !_isLoading,
-      textInputAction: TextInputAction.done,
-      decoration: const InputDecoration(
-        labelText: 'Bio (optional)',
-        prefixIcon: Icon(Icons.description_outlined),
-        alignLabelWithHint: true,
-      ),
-      validator: _validateBio,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Bio',
+          style: AppTheme.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacingXS),
+        Text(
+          'Optional',
+          style: AppTheme.bodySmall.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacingS),
+        TextFormField(
+          controller: _bioController,
+          maxLines: 5,
+          maxLength: AppConstants.maxBioLength,
+          enabled: !_isLoading,
+          textInputAction: TextInputAction.done,
+          style: AppTheme.bodyLarge,
+          decoration: InputDecoration(
+            hintText: 'Tell us about yourself...',
+            prefixIcon: const Icon(Icons.description_outlined),
+          ),
+          validator: _validateBio,
+        ),
+      ],
     );
   }
 }
