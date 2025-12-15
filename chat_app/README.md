@@ -1,6 +1,6 @@
 # Chat App (AI‑assisted)
 
-A full-featured real-time chat application built with Flutter and Supabase. Features include real-time messaging with read receipts, typing indicators, presence tracking, profile editing, and an **AI Assistant** that lets you send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there".
+A full-featured real-time chat application built with Flutter and Supabase. Features include real-time messaging with read receipts, typing indicators, presence tracking, profile editing, image and file attachments, contact profiles, and **Chat Assist** that lets you send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there".
 
 ## Table of Contents
 
@@ -31,7 +31,10 @@ A full-featured real-time chat application built with Flutter and Supabase. Feat
 - Unread message tracking
 - User search functionality
 - Profile editing (username, bio, profile picture upload)
-- **AI Assistant** - Send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there"
+- **Image and file attachments** - Send images from gallery or camera with automatic compression and validation
+- **Contact profiles** - View detailed contact information including avatar, bio, and online status
+- **Enhanced settings** - About & Support section with app version, feedback links, and more
+- **Chat Assist** - Send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there" (formerly AI Assistant)
 
 ## Prerequisites
 
@@ -104,6 +107,14 @@ For detailed setup instructions, continue reading below.
    - Copy the contents into Supabase → SQL Editor → New query
    - Run the script to add `avatar_url`, `bio`, and `updated_at` columns
    - This also creates the `profile-pictures` storage bucket with proper policies
+
+5. **Image and File Attachment Setup:**
+   - Ensure message attachments are supported by your database schema
+   - The `messages` table should have columns: `message_type`, `file_url`, `file_name`, `file_size`
+   - Create a `message-attachments` storage bucket in Supabase Storage with:
+     - Public read access for viewing attachments
+     - Authenticated write access for uploading
+   - See your migration scripts or schema for exact column definitions
 
 5. **AI Command Feature Setup (Optional):**
    
@@ -440,11 +451,20 @@ Key files and their purposes:
   - `lib/screens/profile_edit_screen.dart` - Profile editing UI
   - `lib/services/profile_service.dart` - Image upload, validation, and profile updates
 
-- **AI command messaging:**
-  - `lib/screens/main_screen.dart` - Main container with bottom navigation (Chats & AI Assistant tabs)
-  - `lib/screens/ai_assistant_screen.dart` - AI command interface for natural language messaging with message history
+- **Chat Assist (AI command messaging):**
+  - `lib/screens/main_screen.dart` - Main container with bottom navigation (Chats & Chat Assist tabs)
+  - `lib/screens/ai_assistant_screen.dart` - Chat Assist interface for natural language messaging with message history
   - `lib/services/ai_command_service.dart` - AI intent extraction and recipient resolution
   - `supabase/functions/extract-message-intent/` - Edge Function for AI intent extraction (supports OpenAI and Gemini with automatic fallback)
+
+- **File and image attachments:**
+  - `lib/services/file_upload_service.dart` - Image compression, resizing, and Supabase storage upload
+  - `lib/widgets/message_bubble.dart` - Display image attachments with preview
+  - `lib/widgets/message_input.dart` - Image picker (gallery and camera) integration
+
+- **Contact profiles:**
+  - `lib/screens/contact_profile_screen.dart` - Contact details view with avatar, bio, and online status
+  - Navigate from chat screen header to view contact profile
 
 - **Real-time features:**
   - `lib/services/presence_service.dart` - Online/offline status tracking
@@ -507,7 +527,15 @@ Key files and their purposes:
   - On mobile, ensure camera/storage permissions are granted
   - On web, no permissions needed (browser handles file access)
 
-- **AI command feature not working:**
+- **Image attachments not working:**
+  - Verify the `message-attachments` storage bucket exists in Supabase Storage
+  - Check storage policies allow authenticated users to upload and public users to read
+  - Ensure file size is within limits (max 5MB before compression, compressed to max 2000x2000px)
+  - On mobile, ensure camera/storage permissions are granted
+  - On web, ensure you're using a modern browser with file API support
+  - Verify `messages` table has attachment columns: `message_type`, `file_url`, `file_name`, `file_size`
+
+- **Chat Assist (AI command feature) not working:**
   - Verify API key secrets are set in Supabase Edge Functions:
     - For OpenAI: `ChatApp` secret
     - For Gemini: `GEMINI_API_KEY` secret
@@ -524,7 +552,7 @@ Key files and their purposes:
 
 - **Sample credentials:** `chat_app/my_users.txt` (for testing flows)
 - **Architecture documentation:** See `ARCHITECTURE.md` for detailed system design
-- **AI command feature:** 
+- **Chat Assist (AI command feature):** 
   - Implementation details: `docs/AI_COMMAND_MESSAGING_PLAN.md`
   - Implementation summary: `docs/AI_COMMAND_IMPLEMENTATION_SUMMARY.md`
   - Deployment guide: `DEPLOYMENT_GUIDE.md`
