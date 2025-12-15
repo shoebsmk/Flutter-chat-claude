@@ -5,41 +5,17 @@ on:
     branches:
       - main
       - master
-  workflow_dispatch: # Allow manual triggers
+  workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  contents: write
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Find Flutter project directory
-        id: find_flutter
-        run: |
-          if [ -f "pubspec.yaml" ]; then
-            echo "✅ Found pubspec.yaml in root directory"
-            echo "working_dir=." >> $GITHUB_OUTPUT
-          elif [ -f "chat_app/pubspec.yaml" ]; then
-            echo "✅ Found pubspec.yaml in chat_app subdirectory"
-            echo "working_dir=chat_app" >> $GITHUB_OUTPUT
-          else
-            echo "❌ ERROR: Could not find pubspec.yaml"
-            find . -name "pubspec.yaml" -type f | head -5
-            exit 1
-          fi
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -48,16 +24,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Get Flutter dependencies
-        working-directory: ${{ steps.find_flutter.outputs.working_dir }}
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Verify Flutter setup
-        working-directory: ${{ steps.find_flutter.outputs.working_dir }}
-        run: flutter doctor -v
-
-      - name: Build Flutter web app
-        working-directory: ${{ steps.find_flutter.outputs.working_dir }}
+      - name: Build web app
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -74,37 +44,35 @@ jobs:
           fi
 
       - name: Verify build output
-        working-directory: ${{ steps.find_flutter.outputs.working_dir }}
         run: |
           if [ ! -f "build/web/index.html" ]; then
             echo "❌ ERROR: index.html not found in build/web!"
-            ls -la build/web/ || echo "build/web directory does not exist"
             exit 1
           fi
-          echo "✅ Verified: index.html exists in build/web"
-          echo "📋 Build output structure:"
-          ls -la build/web/ | head -20
+          echo "✅ index.html exists"
+          echo "📋 Checking base href in index.html:"
+          grep -i "base href" build/web/index.html || echo "Base href not found in HTML"
 
-      - name: Add GitHub Pages configuration files
-        working-directory: ${{ steps.find_flutter.outputs.working_dir }}
+      - name: Add GitHub Pages files
         run: |
+          cd build/web
           # Create .nojekyll to prevent Jekyll processing
-          touch build/web/.nojekyll
-          # Create 404.html for client-side routing (copy of index.html)
-          cp build/web/index.html build/web/404.html
-          echo "✅ Added .nojekyll and 404.html for GitHub Pages"
-          echo "📋 Verifying files:"
-          ls -la build/web/ | grep -E "(\.nojekyll|404\.html|index\.html)"
+          touch .nojekyll
+          # Create 404.html for client-side routing
+          cp index.html 404.html
+          # Verify files exist
+          echo "📋 Files in build/web:"
+          ls -la | head -30
+          echo ""
+          echo "✅ Created .nojekyll and 404.html"
+          echo "📋 Verifying critical files:"
+          test -f index.html && echo "✅ index.html exists" || echo "❌ index.html missing"
+          test -f 404.html && echo "✅ 404.html exists" || echo "❌ 404.html missing"
+          test -f .nojekyll && echo "✅ .nojekyll exists" || echo "❌ .nojekyll missing"
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          path: '${{ steps.find_flutter.outputs.working_dir }}/build/web'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          cname: false
