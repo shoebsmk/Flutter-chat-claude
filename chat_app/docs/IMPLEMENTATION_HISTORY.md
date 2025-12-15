@@ -96,7 +96,7 @@ Real-time typing indicators that show when the other user is typing a message.
 ---
 
 ### 3. Profile Editing
-**Status:** ✅ Completed  
+**Status:** ✅ Completed (Enhanced December 2025)  
 **Priority:** High  
 **Effort:** Medium
 
@@ -111,8 +111,18 @@ Users can edit their profile information including username, bio, and profile pi
 - Image compression before upload
 - Validation for username and bio
 
+**Recent Enhancements (December 2025):**
+- **UI Revamp**: Complete redesign of profile edit screen
+  - Updated AppBar with bold title styling and elevation
+  - Improved Save button with better padding and rounded corners
+  - Replaced static SingleChildScrollView with LayoutBuilder for dynamic keyboard handling
+  - New `_buildFormCard` method for better form organization
+  - Enhanced username and bio fields with improved labels, hints, and styles
+  - Increased image picker size for better visibility
+  - Updated error message display with improved styling and shadow effects
+
 **Key Files:**
-- `lib/screens/profile_edit_screen.dart`
+- `lib/screens/profile_edit_screen.dart` (revamped)
 - `lib/services/profile_service.dart`
 - `lib/widgets/image_picker_widget.dart`
 - `lib/widgets/user_avatar.dart`
@@ -138,6 +148,7 @@ ALTER TABLE users ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE;
 - Image compression
 - Real-time avatar updates
 - Error handling and validation
+- Enhanced UI with better keyboard handling and visual design
 
 ---
 
@@ -216,6 +227,94 @@ Track and display unread message counts for each conversation.
 - Real-time count updates
 - Automatic read status updates
 - Per-conversation unread tracking
+
+---
+
+### 7. AI Command Messaging (Enhanced)
+**Status:** ✅ Completed (Enhanced December 2025)  
+**Priority:** High  
+**Effort:** High
+
+**Description:**
+AI-powered command-based messaging feature that allows users to send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there".
+
+**Initial Implementation:**
+- Created AI Assistant screen with command interface
+- Implemented Supabase Edge Function for intent extraction
+- Integrated Google Gemini API for natural language processing
+- Added recipient resolution and message confirmation
+
+**Recent Enhancements (December 2025):**
+
+1. **Multi-Provider AI Support** (Commit: d18c3e4)
+   - Integrated support for both Gemini and OpenAI providers
+   - Automatic provider fallback for reliability
+   - Configurable primary and fallback providers via environment variables
+   - Improved error handling and response parsing
+   - Updated Edge Function with multi-provider architecture
+
+2. **Enhanced AI Assistant Screen** (Commit: 2f53a9b)
+   - Introduced message handling functionality to track user and AI messages
+   - Implemented automatic scrolling to the latest message in the chat view
+   - Added error and success message displays within the chat interface
+   - Updated UI to dynamically show messages in a structured format
+   - Enhanced user experience with message history
+
+3. **Authentication Integration** (Commit: e487d13)
+   - Integrated Supabase authentication state management to track user login status
+   - Updated AI Assistant screen to provide contextual responses based on command extraction results
+   - Improved error messaging in AI Assistant to include AI-generated suggestions when extraction fails
+   - Renamed UI elements for consistency, changing "AI Assistant" to "Chat Assist" across the application
+   - Enhanced intent extraction service to include AI response suggestions for better user guidance
+
+**Key Files:**
+- `lib/screens/ai_assistant_screen.dart` (enhanced)
+- `lib/services/ai_command_service.dart` (enhanced)
+- `lib/screens/main_screen.dart`
+- `supabase/functions/extract-message-intent/index.ts` (multi-provider support)
+- `supabase/functions/extract-message-intent/README.md` (updated documentation)
+
+**Features:**
+- Natural language command processing
+- Multi-provider AI support (Gemini and OpenAI)
+- Automatic provider fallback
+- Message history tracking
+- Contextual error messages with AI suggestions
+- User confirmation before sending
+- Real-time message display
+- Enhanced UI with message bubbles
+
+**Configuration:**
+- Primary provider: Configurable via `AI_PROVIDER` secret (default: OpenAI)
+- Fallback provider: Configurable via `AI_FALLBACK_PROVIDER` secret
+- API keys stored securely in Supabase Edge Function secrets
+
+---
+
+### 8. Message Model Enhancements
+**Status:** ✅ Completed (December 2025)  
+**Priority:** Medium  
+**Effort:** Low
+
+**Description:**
+Improved date handling and logging in the Message model for better reliability and debugging.
+
+**Implementation Details:**
+- Introduced `AppDateUtils` for consistent date parsing in the Message model
+- Updated `Message.fromJson` to log warnings for missing or unparseable `created_at` timestamps
+- Removed redundant date parsing logic from the Message model
+- Enhanced date parsing to handle Supabase timestamp formats effectively
+- Improved UTC timezone handling for Supabase timestamps
+
+**Key Files:**
+- `lib/models/message.dart` (enhanced)
+- `lib/utils/date_utils.dart` (enhanced with UTC handling)
+
+**Features:**
+- Consistent date parsing across the application
+- Better error logging for date parsing issues
+- Proper UTC timezone handling for Supabase timestamps
+- Warning logs for debugging date-related issues
 
 ---
 
@@ -351,19 +450,39 @@ Comprehensive restructuring of the README for better organization and usability.
 ## Testing
 
 ### Test Structure
-**Status:** ✅ Partially Implemented
+**Status:** ✅ Enhanced (December 2025)
 
 **Test Files:**
 - `test/services/profile_service_test.dart`
+- `test/services/chat_service_test.dart` - **NEW**
 - `test/screens/profile_edit_screen_test.dart`
+- `test/models/message_test.dart` - **NEW**
+- `test/models/user_test.dart` - **NEW**
+- `test/exceptions/app_exceptions_test.dart` - **NEW**
 - `test/widget_test.dart`
 
 **Coverage:**
 - Profile service tests
+- Chat service tests (message processing, validation, conversation logic)
 - Profile edit screen tests
+- Message model tests (JSON serialization, equality, helper methods)
+- User model tests (JSON serialization, equality, online status)
+- Exception handling tests (all exception types and error messages)
 - Basic widget tests
 
-**Note:** Test coverage could be expanded for other services and screens.
+**Test Statistics:**
+- **85+ tests** covering critical functionality
+- Comprehensive exception handling tests (71 tests)
+- Model tests (25 tests)
+- Service tests (8 tests)
+- Widget tests (4 tests)
+
+**Testing Guide:**
+- See `test/TESTING.md` for detailed testing instructions
+- Run all tests: `flutter test`
+- Generate coverage: `flutter test --coverage`
+
+**Note:** Test coverage has been significantly expanded with comprehensive unit tests for models, exceptions, and services.
 
 ---
 
@@ -399,8 +518,12 @@ See `FEATURE_SUGGESTIONS.md` for complete list and prioritization.
 ### Completed Features
 - ✅ 4 Major Features (Online/Offline, Typing Indicators, Profile Editing, Theme Toggle)
 - ✅ 2 Core Features (User Search, Unread Tracking)
+- ✅ 1 AI Feature (AI Command Messaging with Multi-Provider Support)
 - ✅ 1 Documentation Improvement (README Restructuring)
 - ✅ 2 Database Migrations
+- ✅ Enhanced Testing Infrastructure (85+ tests)
+- ✅ UI/UX Improvements (Profile Edit Screen, AI Assistant Screen)
+- ✅ Message Model Enhancements (Date Handling)
 
 ### In Progress
 - ⚠️ Code Cleanup Plan (Status Unknown)
@@ -421,7 +544,7 @@ See `FEATURE_SUGGESTIONS.md` for complete list and prioritization.
 
 ---
 
-**Last Updated:** 2024  
+**Last Updated:** December 2025  
 **Maintained By:** Development Team  
 **Related Documents:**
 - `FEATURE_SUGGESTIONS.md` - Feature backlog and prioritization

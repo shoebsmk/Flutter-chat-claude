@@ -52,7 +52,7 @@ graph TB
     end
     
     subgraph "External Services"
-        GeminiAPI[Google Gemini API<br/>AI Processing]
+        AIProviders[AI Providers<br/>OpenAI & Gemini]
     end
     
     UI --> Services
@@ -64,7 +64,7 @@ graph TB
     Config --> EdgeFunctions
     Auth --> DB
     Realtime --> DB
-    EdgeFunctions --> GeminiAPI
+    EdgeFunctions --> AIProviders
 ```
 
 ### Layered Architecture
@@ -97,7 +97,7 @@ graph TD
     
     subgraph "External Services"
         SupabaseBackend[Supabase Backend<br/>Auth, Database, Realtime, Edge Functions]
-        GeminiAPI[Google Gemini API<br/>AI Processing]
+        AIProviders[AI Providers<br/>OpenAI & Gemini with Fallback]
     end
     
     Screens --> AuthService
@@ -127,7 +127,7 @@ graph TD
     AICommandService --> SupabaseConfig
     
     SupabaseConfig --> SupabaseBackend
-    SupabaseBackend --> GeminiAPI
+    SupabaseBackend --> AIProviders
 ```
 
 ---
@@ -164,7 +164,10 @@ lib/
 │   └── app_theme.dart          # App theming
 ├── utils/
 │   ├── constants.dart          # App constants
-│   └── date_utils.dart         # Date formatting utilities
+│   └── date_utils.dart         # Date formatting utilities (AppDateUtils)
+│                                # - Consistent date parsing for Supabase timestamps
+│                                # - UTC timezone handling
+│                                # - Relative time formatting
 └── widgets/
     ├── loading_shimmer.dart    # Loading placeholder
     ├── message_bubble.dart     # Individual message widget
@@ -285,20 +288,21 @@ sequenceDiagram
     participant AIAssistantScreen
     participant AICommandService
     participant EdgeFunction
-    participant GeminiAPI
+    participant AIProvider
     participant UserService
     participant ChatService
 
     User->>AIAssistantScreen: Type command "Send Ahmed I'll be late"
     AIAssistantScreen->>AICommandService: extractIntent(command)
     AICommandService->>EdgeFunction: POST /extract-message-intent
-    EdgeFunction->>GeminiAPI: Extract recipient & message
-    GeminiAPI-->>EdgeFunction: {"recipient_query": "Ahmed", "message": "I'll be late"}
-    EdgeFunction-->>AICommandService: Intent data
+    EdgeFunction->>AIProvider: Extract recipient & message (OpenAI/Gemini)
+    AIProvider-->>EdgeFunction: {"recipient_query": "Ahmed", "message": "I'll be late"}
+    EdgeFunction-->>AICommandService: Intent data (+ AI suggestions if needed)
     AICommandService->>UserService: Search for recipient
     UserService-->>AICommandService: User object
     AICommandService-->>AIAssistantScreen: Intent + Recipient
     AIAssistantScreen->>AIAssistantScreen: Show confirmation dialog
+    AIAssistantScreen->>AIAssistantScreen: Add message to history
     User->>AIAssistantScreen: Confirm send
     AIAssistantScreen->>ChatService: sendMessage(receiverId, message)
     ChatService->>ChatService: Message sent
@@ -338,7 +342,7 @@ Message {
   String receiverId   // Receiver's user ID
   String content      // Message text
   bool isRead         // Read status
-  DateTime createdAt  // Timestamp
+  DateTime createdAt  // Timestamp (parsed via AppDateUtils)
 }
 ```
 
@@ -346,6 +350,8 @@ Message {
 - Represents a chat message
 - Handles message direction logic
 - Provides helper methods (isSentBy, getOtherUserId)
+- Uses AppDateUtils for consistent date parsing
+- Logs warnings for missing or unparseable timestamps
 
 ---
 
@@ -457,10 +463,12 @@ Message {
 - Supabase Client (Edge Functions)
 
 **Features:**
-- Natural language command parsing via Google Gemini API
+- Natural language command parsing via multi-provider AI (OpenAI and Gemini)
+- Automatic provider fallback for reliability
 - Automatic recipient matching (exact, partial, fuzzy)
-- Error handling for extraction failures
+- Error handling for extraction failures with AI-generated suggestions
 - Returns structured intent data (recipient_query, message)
+- Integrated with Supabase authentication state management
 
 #### ThemeService
 **Purpose:** Manages theme preference persistence
@@ -528,16 +536,23 @@ Message {
 
 **Features:**
 - Natural language command input
-- AI intent extraction via Edge Function
+- AI intent extraction via Edge Function (multi-provider support)
+- Message history tracking (user and AI messages)
+- Automatic scrolling to latest message
 - Recipient resolution and confirmation dialog
 - Message sending with user confirmation
-- Error handling and loading states
+- Error handling with AI-generated suggestions
+- Success/error message displays within chat interface
+- Contextual responses based on authentication state
 - Example command hints
+- Renamed to "Chat Assist" for consistency
 
 **State Management:**
 - Local state with StatefulWidget
 - Loading states during AI processing
 - Error states for failed extractions
+- Message history state
+- Authentication state integration
 
 #### ChatScreen
 **Purpose:** Individual conversation interface
@@ -558,12 +573,17 @@ Message {
 - Username availability checking
 - Image compression and preview
 - Error handling with rollback
+- Enhanced UI with improved styling and layout
+- Dynamic keyboard handling with LayoutBuilder
+- Better form organization with card-based layout
+- Improved error message display with shadow effects
 
 **State Management:**
 - Local state with StatefulWidget
 - Form validation
 - Loading states
 - Error states
+- Keyboard-aware layout management
 
 #### SettingsScreen
 **Purpose:** App settings and preferences interface
@@ -619,6 +639,36 @@ Message {
 
 ---
 
+### Utilities
+
+#### AppDateUtils
+**Purpose:** Centralized date and time operations
+
+**Key Methods:**
+- `parse(dynamic value)` - Parses DateTime from various formats (DateTime, String, or null)
+- `parseOrDefault(dynamic value, DateTime? fallback)` - Parses with fallback
+- `formatRelative(DateTime? dateTime)` - Formats as relative time (e.g., "2 minutes ago")
+- `formatMessageTime(DateTime dateTime)` - Formats for message bubbles
+- `formatFull(DateTime dateTime)` - Full timestamp with date and time
+- `formatTime(DateTime dateTime)` - Time portion only
+- `formatDate(DateTime dateTime)` - Date portion only
+- `isToday(DateTime dateTime)` - Checks if date is today
+- `isYesterday(DateTime dateTime)` - Checks if date is yesterday
+- `isWithinLastWeek(DateTime dateTime)` - Checks if within last week
+
+**Features:**
+- Handles Supabase timestamp formats (ISO 8601, UTC)
+- Proper UTC timezone handling for Supabase timestamps
+- Consistent date parsing across the application
+- Warning logs for debugging date-related issues
+- Used by Message model for reliable date parsing
+
+**Dependencies:**
+- `intl` package for date formatting
+- `timeago` package for relative time formatting
+
+---
+
 ## Technology Stack
 
 ### Frontend
@@ -637,9 +687,14 @@ Message {
   - **Edge Functions:** Serverless functions for AI intent extraction
 
 ### External Services
-- **Google Gemini API:** Natural language processing for command extraction
-  - Model: `gemini-1.5-flash` (primary, with fallback to `gemini-pro`)
-  - Automatic model fallback for reliability
+- **AI Providers:** Natural language processing for command extraction
+  - **OpenAI:** Primary provider (default)
+    - Model: `gpt-5-nano` (fast and cost-effective)
+  - **Google Gemini API:** Alternative/fallback provider
+    - Models: `gemini-1.5-flash` (primary), `gemini-pro` (fallback)
+    - Automatic model fallback within provider
+  - **Provider Fallback:** Automatic switching between providers for reliability
+  - **Configuration:** Via Supabase Edge Function secrets (`AI_PROVIDER`, `AI_FALLBACK_PROVIDER`)
 
 ### Key Dependencies
 
@@ -654,10 +709,10 @@ shared_preferences: ^2.2.2     # Local storage for preferences
 ```
 
 **Supabase Edge Functions:**
-- `extract-message-intent`: AI intent extraction using Google Gemini API
+- `extract-message-intent`: AI intent extraction using multi-provider support
   - Language: TypeScript (Deno runtime)
-  - External API: Google Gemini API
-  - Features: Model fallback, CORS support, input validation
+  - External APIs: OpenAI API and Google Gemini API
+  - Features: Multi-provider support, provider fallback, model fallback, CORS support, input validation, AI response suggestions
 
 ---
 
@@ -979,16 +1034,36 @@ Run the SQL script `supabase_setup.sql` in your Supabase SQL editor to set up th
 
 ### AI Command Feature Setup
 
+**Option 1: Using OpenAI (Default)**
+1. Get an OpenAI API key from https://platform.openai.com/api-keys
+2. Set the API key in Supabase Edge Functions secrets:
+   ```bash
+   supabase secrets set ChatApp=your_openai_key_here
+   ```
+
+**Option 2: Using Gemini**
 1. Get a Gemini API key from https://aistudio.google.com/app/apikey
 2. Set the API key in Supabase Edge Functions secrets:
    ```bash
-   supabase secrets set GEMINI_API_KEY=your_key_here
+   supabase secrets set GEMINI_API_KEY=your_gemini_key_here
+   supabase secrets set AI_PROVIDER=gemini
    ```
-3. Deploy the Edge Function:
+
+**Option 3: Configure Both Providers (Recommended)**
+1. Set up both providers for automatic fallback:
    ```bash
-   supabase functions deploy extract-message-intent
+   supabase secrets set ChatApp=your_openai_key_here
+   supabase secrets set GEMINI_API_KEY=your_gemini_key_here
+   supabase secrets set AI_PROVIDER=openai
+   supabase secrets set AI_FALLBACK_PROVIDER=gemini
    ```
-4. See `DEPLOYMENT_GUIDE.md` and `supabase/functions/extract-message-intent/README.md` for detailed instructions.
+
+**Deploy the Edge Function:**
+```bash
+supabase functions deploy extract-message-intent
+```
+
+See `DEPLOYMENT_GUIDE.md` and `supabase/functions/extract-message-intent/README.md` for detailed instructions.
 
 ### Project Configuration
 
@@ -1076,5 +1151,5 @@ Update this document when:
 
 ---
 
-**Last Updated:** 2024
-**Version:** 1.0.0
+**Last Updated:** December 2025
+**Version:** 1.1.0

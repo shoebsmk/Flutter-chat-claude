@@ -106,13 +106,32 @@ For detailed setup instructions, continue reading below.
    - This also creates the `profile-pictures` storage bucket with proper policies
 
 5. **AI Command Feature Setup (Optional):**
+   
+   The AI command feature supports multiple providers (OpenAI and Gemini) with automatic fallback.
+   
+   **Option 1: Using OpenAI (Default)**
+   - Get an OpenAI API key from https://platform.openai.com/api-keys
+   - Set the API key in Supabase:
+     - Go to Project Settings → Edge Functions → Secrets
+     - Add `ChatApp` with your OpenAI API key value
+   
+   **Option 2: Using Gemini**
    - Get a Gemini API key from https://aistudio.google.com/app/apikey
    - Set the API key in Supabase:
      - Go to Project Settings → Edge Functions → Secrets
      - Add `GEMINI_API_KEY` with your API key value
-   - Deploy the Edge Function:
-     - Using CLI: `supabase functions deploy extract-message-intent`
-     - Or via Dashboard: Edge Functions → Deploy new function
+     - Add `AI_PROVIDER=gemini` to use Gemini as the primary provider
+   
+   **Option 3: Configure Both Providers (Recommended)**
+   - Set up both providers for automatic fallback:
+     - Add `ChatApp` with your OpenAI API key
+     - Add `GEMINI_API_KEY` with your Gemini API key
+     - Add `AI_PROVIDER=openai` (or `gemini`) for primary provider
+     - Add `AI_FALLBACK_PROVIDER=gemini` (or `openai`) for fallback
+   
+   **Deploy the Edge Function:**
+   - Using CLI: `supabase functions deploy extract-message-intent`
+   - Or via Dashboard: Edge Functions → Deploy new function
    - See `DEPLOYMENT_GUIDE.md` and `supabase/functions/extract-message-intent/README.md` for details
 
 #### Optional: Enable RLS for `public.users`
@@ -423,9 +442,9 @@ Key files and their purposes:
 
 - **AI command messaging:**
   - `lib/screens/main_screen.dart` - Main container with bottom navigation (Chats & AI Assistant tabs)
-  - `lib/screens/ai_assistant_screen.dart` - AI command interface for natural language messaging
+  - `lib/screens/ai_assistant_screen.dart` - AI command interface for natural language messaging with message history
   - `lib/services/ai_command_service.dart` - AI intent extraction and recipient resolution
-  - `supabase/functions/extract-message-intent/` - Edge Function for AI intent extraction (uses Google Gemini API)
+  - `supabase/functions/extract-message-intent/` - Edge Function for AI intent extraction (supports OpenAI and Gemini with automatic fallback)
 
 - **Real-time features:**
   - `lib/services/presence_service.dart` - Online/offline status tracking
@@ -489,11 +508,14 @@ Key files and their purposes:
   - On web, no permissions needed (browser handles file access)
 
 - **AI command feature not working:**
-  - Verify `GEMINI_API_KEY` secret is set in Supabase Edge Functions
+  - Verify API key secrets are set in Supabase Edge Functions:
+    - For OpenAI: `ChatApp` secret
+    - For Gemini: `GEMINI_API_KEY` secret
+    - For provider selection: `AI_PROVIDER` and `AI_FALLBACK_PROVIDER` (optional)
   - Ensure the `extract-message-intent` Edge Function is deployed
   - Check Edge Function logs in Supabase dashboard for errors
-  - Verify your Gemini API key is valid and has quota remaining
-  - See `DEPLOYMENT_GUIDE.md` for detailed setup instructions
+  - Verify your API keys are valid and have quota remaining
+  - See `DEPLOYMENT_GUIDE.md` and `supabase/functions/extract-message-intent/README.md` for detailed setup instructions
 
 - **UID shown in AppBar:**
   - Update the title to `Text('Chats')` or fetch and display the current user's `username`
@@ -504,9 +526,12 @@ Key files and their purposes:
 - **Architecture documentation:** See `ARCHITECTURE.md` for detailed system design
 - **AI command feature:** 
   - Implementation details: `docs/AI_COMMAND_MESSAGING_PLAN.md`
+  - Implementation summary: `docs/AI_COMMAND_IMPLEMENTATION_SUMMARY.md`
   - Deployment guide: `DEPLOYMENT_GUIDE.md`
   - Edge Function README: `supabase/functions/extract-message-intent/README.md`
+- **Testing:** See `test/TESTING.md` for testing instructions and coverage information
 - **Feature suggestions:** See `docs/FEATURE_SUGGESTIONS.md` for potential enhancements
+- **Implementation history:** See `docs/IMPLEMENTATION_HISTORY.md` for development progress
 - **Security best practices:**
   - Do not commit secrets to version control
   - Use environment variables or `--dart-define` for API keys
