@@ -6,8 +6,8 @@ class AppTheme {
   static const Color primaryLight = Color(0xFF6366F1); // Indigo
   static const Color primaryDark = Color(0xFF818CF8);
   static const Color secondaryLight = Color(0xFF8B5CF6); // Purple
-  static const Color backgroundLight = Color(0xFFF8F9FA);
-  static const Color surfaceLight = Color(0xFFFFFFFF);
+  static const Color backgroundLight = Color(0xFFE5E7EB); // Darker grey background
+  static const Color surfaceLight = Color(0xFFF1F3F4); // Off-white surface
   static const Color errorLight = Color(0xFFEF4444);
   static const Color successLight = Color(0xFF10B981);
 
@@ -27,7 +27,7 @@ class AppTheme {
 
   // Message Colors
   static const Color messageSentLight = Color(0xFF6366F1);
-  static const Color messageReceivedLight = Color(0xFFE5E7EB);
+  static const Color messageReceivedLight = Color(0xFFD1D5DB); // Darker grey for received messages
   static const Color messageSentDark = Color(0xFF6366F1);
   static const Color messageReceivedDark = Color(0xFF334155);
 
@@ -113,11 +113,11 @@ class AppTheme {
         fillColor: surfaceLight,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusM),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: Colors.grey.shade400),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusM),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: Colors.grey.shade400),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusM),

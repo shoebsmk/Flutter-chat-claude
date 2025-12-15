@@ -1,35 +1,255 @@
 // Supabase Edge Function for extracting message intent from natural language commands
-// Uses Google Gemini API to extract recipient query and message text
+// Supports multiple AI providers: Gemini and OpenAI
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
+// Types
+type Provider = 'gemini' | 'openai';
+type ModelConfig = {
+  name: string;
+  version?: string;
+  [key: string]: unknown;
+};
+
+interface AIProvider {
+  name: Provider;
+  extractIntent(command: string, model?: string): Promise<{ recipient_query: string; message: string }>;
+}
+
+// Helper function to create CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const jsonHeaders = {
+  'Content-Type': 'application/json',
+  ...corsHeaders,
+};
+
+// Helper function to parse and clean JSON response
+function parseJsonResponse(content: string): { recipient_query: string; message: string } | null {
+  try {
+    let cleanedContent = content.trim();
+    // Remove markdown code blocks if present
+    if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '');
+    }
+    const parsed = JSON.parse(cleanedContent);
+    return {
+      recipient_query: parsed.recipient_query || '',
+      message: parsed.message || '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Gemini Provider Implementation
+class GeminiProvider implements AIProvider {
+  name: Provider = 'gemini';
+  private apiKey: string;
+  private defaultModels: ModelConfig[] = [
+    { version: 'v1', name: 'gemini-2.5-flash-lite' },
+    { version: 'v1beta', name: 'gemini-2.5-flash' },
+    { version: 'v1', name: 'gemini-2.5-pro' },
+    { version: 'v1beta', name: 'gemini-3-pro-preview' },
+  ];
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  async extractIntent(command: string, model?: string): Promise<{ recipient_query: string; message: string }> {
+    const prompt = `Extract recipient name/query and message text from this command: "${command.trim()}"\n\nReturn ONLY valid JSON with this exact format (no other text, no markdown, no code blocks):\n{"recipient_query": "name or partial name", "message": "message text"}\n\nExamples:\n- "Send Ahmed I'll be late" -> {"recipient_query": "Ahmed", "message": "I'll be late"}\n- "Message John Hello there" -> {"recipient_query": "John", "message": "Hello there"}\n- "Tell Sarah Meeting cancelled" -> {"recipient_query": "Sarah", "message": "Meeting cancelled"}`;
+
+    const requestBody = {
+      contents: [{
+        parts: [{ text: prompt }]
+      }],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+      },
+    };
+
+    // Determine which models to try
+    const modelsToTry = model 
+      ? [{ version: 'v1', name: model }] 
+      : this.defaultModels;
+
+    let lastError: string | null = null;
+
+    for (const config of modelsToTry) {
+      try {
+        const version = config.version || 'v1';
+        const modelName = config.name;
+        const url = `https://generativelanguage.googleapis.com/${version}/models/${modelName}:generateContent?key=${this.apiKey}`;
+        
+        console.log(`[Gemini] Trying model: ${modelName} (${version})`);
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          if (!content) {
+            console.error('[Gemini] Invalid response structure');
+            lastError = 'Invalid response from AI';
+            continue;
+          }
+
+          const parsed = parseJsonResponse(content);
+          if (parsed) {
+            return parsed;
+          }
+          
+          lastError = 'Failed to parse AI response';
+          continue;
+        } else {
+          const errorData = await response.text();
+          console.log(`[Gemini] Model ${modelName} failed:`, response.status);
+          lastError = errorData;
+          continue;
+        }
+      } catch (error) {
+        console.error(`[Gemini] Error with model ${config.name}:`, error);
+        lastError = error instanceof Error ? error.message : String(error);
+        continue;
+      }
+    }
+
+    throw new Error(`Gemini API error: ${lastError || 'All model attempts failed'}`);
+  }
+}
+
+// OpenAI Provider Implementation
+class OpenAIProvider implements AIProvider {
+  name: Provider = 'openai';
+  private apiKey: string;
+  private defaultModels: string[] = [
+    'gpt-5-nano',
+    'gpt-4.1-nano-2025-04-14',
+    'gpt-5-nano-2025-08-07',
+    'gpt-5-nano',
+  ];
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  async extractIntent(command: string, model?: string): Promise<{ recipient_query: string; message: string }> {
+    const prompt = `Extract recipient name/query and message text from this command: "${command.trim()}"\n\nReturn ONLY valid JSON with this exact format (no other text, no markdown, no code blocks):\n{"recipient_query": "name or partial name", "message": "message text"}\n\nExamples:\n- "Send Ahmed I'll be late" -> {"recipient_query": "Ahmed", "message": "I'll be late"}\n- "Message John Hello there" -> {"recipient_query": "John", "message": "Hello there"}\n- "Tell Sarah Meeting cancelled" -> {"recipient_query": "Sarah", "message": "Meeting cancelled"}`;
+
+    const modelsToTry = model ? [model] : this.defaultModels;
+    let lastError: string | null = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`[OpenAI] Trying model: ${modelName}`);
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a helpful assistant that extracts recipient names and messages from natural language commands. Always return valid JSON only.',
+              },
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+            response_format: { type: 'json_object' },
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content;
+          
+          if (!content) {
+            console.error('[OpenAI] Invalid response structure');
+            lastError = 'Invalid response from AI';
+            continue;
+          }
+
+          const parsed = parseJsonResponse(content);
+          if (parsed) {
+            return parsed;
+          }
+          
+          lastError = 'Failed to parse AI response';
+          continue;
+        } else {
+          const errorData = await response.text();
+          console.log(`[OpenAI] Model ${modelName} failed:`, response.status);
+          lastError = errorData;
+          continue;
+        }
+      } catch (error) {
+        console.error(`[OpenAI] Error with model ${modelName}:`, error);
+        lastError = error instanceof Error ? error.message : String(error);
+        continue;
+      }
+    }
+
+    throw new Error(`OpenAI API error: ${lastError || 'All model attempts failed'}`);
+  }
+}
+
+// Provider Factory
+function createProvider(providerName?: string): AIProvider {
+  // Determine provider from request param or environment variable
+  const provider = (providerName || Deno.env.get('AI_PROVIDER') || 'openai').toLowerCase() as Provider;
+
+  if (provider === 'openai') {
+    const apiKey = Deno.env.get('ChatApp');
+    if (!apiKey) {
+      throw new Error('ChatApp secret not configured. Please set the secret with your OpenAI API key.');
+    }
+    return new OpenAIProvider(apiKey);
+  } else if (provider === 'gemini') {
+    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY not configured. Please set the secret.');
+    }
+    return new GeminiProvider(apiKey);
+  } else {
+    throw new Error(`Unsupported provider: ${provider}. Supported providers: 'gemini', 'openai'`);
+  }
+}
+
+// Main handler
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
+      headers: corsHeaders,
     });
   }
 
   try {
-    const { command } = await req.json();
+    const { command, provider, model } = await req.json();
     
     // Validate input
     if (!command || typeof command !== 'string' || command.trim().length === 0) {
       return new Response(
         JSON.stringify({ error: 'Command is required' }),
-        { 
-          status: 400, 
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          } 
-        }
+        { status: 400, headers: jsonHeaders }
       );
     }
 
@@ -37,175 +257,78 @@ serve(async (req) => {
     if (command.length > 500) {
       return new Response(
         JSON.stringify({ error: 'Command is too long (max 500 characters)' }),
-        { 
-          status: 400, 
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          } 
-        }
+        { status: 400, headers: jsonHeaders }
       );
     }
-    
-    // Get Gemini API key from environment
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      console.error('GEMINI_API_KEY not configured');
+
+    // Create provider instance
+    let aiProvider: AIProvider;
+    try {
+      aiProvider = createProvider(provider);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       return new Response(
-        JSON.stringify({ error: 'AI service not configured. Please set GEMINI_API_KEY secret.' }),
-        { 
-          status: 500, 
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          } 
-        }
+        JSON.stringify({ error: errorMessage }),
+        { status: 500, headers: jsonHeaders }
       );
     }
-    
-    console.log('Calling Gemini API with command:', command.substring(0, 50) + '...');
-    
-    // Prepare the request body
-    const requestBody = {
-      contents: [{
-        parts: [{
-          text: `Extract recipient name/query and message text from this command: "${command.trim()}"\n\nReturn ONLY valid JSON with this exact format (no other text, no markdown, no code blocks):\n{"recipient_query": "name or partial name", "message": "message text"}\n\nExamples:\n- "Send Ahmed I'll be late" -> {"recipient_query": "Ahmed", "message": "I'll be late"}\n- "Message John Hello there" -> {"recipient_query": "John", "message": "Hello there"}\n- "Tell Sarah Meeting cancelled" -> {"recipient_query": "Sarah", "message": "Meeting cancelled"}`
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.1, // Low temperature for consistent extraction
-        responseMimeType: 'application/json',
-      },
-    };
-    
-    // Try different model names and API versions
-    const modelConfigs = [
-      { version: 'v1', model: 'gemini-1.5-flash' },
-      { version: 'v1beta', model: 'gemini-1.5-flash' },
-      { version: 'v1', model: 'gemini-pro' },
-      { version: 'v1beta', model: 'gemini-pro' },
-    ];
-    
-    let lastError: string | null = null;
-    
-    for (const config of modelConfigs) {
-      try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${geminiApiKey}`;
-        console.log(`Trying model: ${config.model} with API version ${config.version}`);
-        
-        const response = await fetch(
-          geminiUrl,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-          }
-        );
-        
-        if (response.ok) {
-          // Success! Process the response
-          const data = await response.json();
-          
-          // Extract text from Gemini response
-          const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (!content) {
-            console.error('Invalid Gemini response structure:', JSON.stringify(data));
-            lastError = 'Invalid response from AI';
-            continue; // Try next model
-          }
-          
-          // Parse JSON response
-          let parsedContent;
-          try {
-            // Clean up the content (remove markdown code blocks if present)
-            let cleanedContent = content.trim();
-            if (cleanedContent.startsWith('```')) {
-              cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '');
-            }
-            parsedContent = JSON.parse(cleanedContent);
-          } catch (parseError) {
-            console.error('JSON parse error:', parseError, 'Content:', content);
-            lastError = 'Failed to parse AI response';
-            continue; // Try next model
-          }
-          
-          // Validate and return
-          const recipientQuery = parsedContent.recipient_query || '';
-          const message = parsedContent.message || '';
-          
+
+    console.log(`[${aiProvider.name}] Extracting intent from command: ${command.substring(0, 50)}...`);
+
+    // Extract intent using the selected provider
+    try {
+      const result = await aiProvider.extractIntent(command, model);
+      
+      return new Response(
+        JSON.stringify({
+          recipient_query: result.recipient_query,
+          message: result.message,
+        }),
+        { headers: jsonHeaders }
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[${aiProvider.name}] Error:`, errorMessage);
+      
+      // Try fallback provider if configured
+      const fallbackProvider = Deno.env.get('AI_FALLBACK_PROVIDER');
+      if (fallbackProvider && fallbackProvider !== provider) {
+        console.log(`[${aiProvider.name}] Failed, trying fallback: ${fallbackProvider}`);
+        try {
+          const fallback = createProvider(fallbackProvider);
+          const result = await fallback.extractIntent(command, model);
           return new Response(
             JSON.stringify({
-              recipient_query: recipientQuery,
-              message: message,
+              recipient_query: result.recipient_query,
+              message: result.message,
             }),
-            { 
-              headers: { 
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-              } 
-            }
+            { headers: jsonHeaders }
           );
-        } else {
-          // This model/version didn't work, try next
-          const errorData = await response.text();
-          console.log(`Model ${config.model} (${config.version}) failed:`, response.status);
-          lastError = errorData;
-          continue;
-        }
-      } catch (fetchError) {
-        console.error(`Error with model ${config.model}:`, fetchError);
-        lastError = fetchError instanceof Error ? fetchError.message : String(fetchError);
-        continue;
-      }
-    }
-    
-    // All models failed
-    console.error('All Gemini model attempts failed. Last error:', lastError);
-    let errorMessage = 'Failed to extract intent';
-    try {
-      if (lastError) {
-        const errorJson = JSON.parse(lastError);
-        if (errorJson.error?.message) {
-          errorMessage = `Gemini API error: ${errorJson.error.message}`;
-        } else if (errorJson.error) {
-          errorMessage = `Gemini API error: ${JSON.stringify(errorJson.error)}`;
-        } else {
-          errorMessage = `Gemini API error: ${lastError}`;
+        } catch (fallbackError) {
+          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+          return new Response(
+            JSON.stringify({ 
+              error: `Primary provider failed: ${errorMessage}. Fallback also failed: ${fallbackMessage}` 
+            }),
+            { status: 500, headers: jsonHeaders }
+          );
         }
       }
-    } catch {
-      errorMessage = `Gemini API error: ${lastError || 'All model attempts failed. Please check your API key and model availability.'}`;
+
+      return new Response(
+        JSON.stringify({ error: errorMessage }),
+        { status: 500, headers: jsonHeaders }
+      );
     }
-    
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { 
-        status: 500, 
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        } 
-      }
-    );
   } catch (error) {
     console.error('Edge function error:', error);
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ 
         error: `Internal server error: ${errorMessage}`,
         details: error instanceof Error ? error.stack : undefined
       }),
-      { 
-        status: 500, 
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        } 
-      }
+      { status: 500, headers: jsonHeaders }
     );
   }
 });

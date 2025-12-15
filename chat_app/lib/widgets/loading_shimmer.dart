@@ -11,8 +11,8 @@ class LoadingShimmer extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade400,
+      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
       child: _ShimmerContent(),
     );
   }
@@ -28,6 +28,9 @@ class _ShimmerContent extends StatelessWidget {
 class _ShimmerListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shimmerColor = theme.colorScheme.surface;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppTheme.spacingM,
@@ -38,9 +41,9 @@ class _ShimmerListItem extends StatelessWidget {
           Container(
             width: 56,
             height: 56,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
+              color: shimmerColor,
             ),
           ),
           const SizedBox(width: AppTheme.spacingM),
@@ -52,7 +55,7 @@ class _ShimmerListItem extends StatelessWidget {
                   width: double.infinity,
                   height: 16,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: shimmerColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -61,7 +64,7 @@ class _ShimmerListItem extends StatelessWidget {
                   width: 150,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: shimmerColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -81,10 +84,11 @@ class ChatListShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final shimmerColor = theme.colorScheme.surface;
 
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade400,
+      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
       child: ListView.builder(
         itemCount: 8,
         itemBuilder: (context, index) {
@@ -98,9 +102,9 @@ class ChatListShimmer extends StatelessWidget {
                 Container(
                   width: 56,
                   height: 56,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white,
+                    color: shimmerColor,
                   ),
                 ),
                 const SizedBox(width: AppTheme.spacingM),
@@ -112,7 +116,7 @@ class ChatListShimmer extends StatelessWidget {
                         width: double.infinity,
                         height: 16,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: shimmerColor,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -121,7 +125,7 @@ class ChatListShimmer extends StatelessWidget {
                         width: 150,
                         height: 12,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: shimmerColor,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -132,7 +136,7 @@ class ChatListShimmer extends StatelessWidget {
                   width: 50,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: shimmerColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -154,10 +158,11 @@ class MessageBubbleShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final shimmerColor = theme.colorScheme.surface;
 
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade400,
+      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
       child: Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
@@ -172,7 +177,7 @@ class MessageBubbleShimmer extends StatelessWidget {
           width: MediaQuery.of(context).size.width * 0.7,
           height: 60,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: shimmerColor,
             borderRadius: BorderRadius.circular(AppTheme.radiusM),
           ),
         ),

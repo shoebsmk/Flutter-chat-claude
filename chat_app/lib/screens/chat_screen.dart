@@ -338,18 +338,12 @@ class _ChatScreenState extends State<ChatScreen> {
   ) {
     final isMe = message.isSentBy(_currentUserId ?? '');
 
-    // Determine if we should show avatar (for received messages)
-    final showAvatar =
-        !isMe &&
-        (index >= messages.length - 1 ||
-            messages[index + 1].senderId != widget.receiverId);
-
     return MessageBubble(
       content: message.content,
       createdAt: message.createdAt,
       isMe: isMe,
       senderName: isMe ? null : widget.receiverName,
-      showAvatar: showAvatar,
+      showAvatar: false, // Avatars removed from chat messages
       isDeletable: isMe && !message.isDeleted,
       onDelete: isMe && !message.isDeleted
           ? () => _handleDeleteMessage(message)
