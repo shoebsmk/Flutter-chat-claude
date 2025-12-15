@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for gh-pages action
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -72,7 +74,10 @@ jobs:
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web
+          publish_branch: gh-pages
           cname: false
+          keep_files: false
