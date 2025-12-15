@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../exceptions/app_exceptions.dart';
 import '../models/message.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
+import '../services/file_upload_service.dart';
 import '../services/typing_service.dart';
 import '../services/user_service.dart';
 import '../widgets/message_bubble.dart';
@@ -42,10 +44,16 @@ class _ChatScreenState extends State<ChatScreen> {
   final _chatService = ChatService();
   final _typingService = TypingService();
   final _userService = UserService();
+  final _fileUploadService = FileUploadService();
 
   // Controllers
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+
+  // Image selection state
+  XFile? _selectedImage;
+  bool _isUploading = false;
+  int _messageInputKey = 0; // Used to reset MessageInput widget
 
   // Streams
   late Stream<List<Message>> _messagesStream;
@@ -174,17 +182,61 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Sends a message to the receiver and scrolls to bottom.
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
-    if (content.isEmpty) return;
+    // Allow sending if there's content or an image
+    if (content.isEmpty && _selectedImage == null) return;
 
     // Haptic feedback on send
     HapticService.instance.mediumImpact();
 
+    // If uploading, don't allow multiple sends
+    if (_isUploading) return;
+
+    setState(() {
+      _isUploading = true;
+    });
+
     try {
+      String? fileUrl;
+      String? fileName;
+      int? fileSize;
+      String messageType = 'text';
+
+      // Upload image if one is selected
+      if (_selectedImage != null) {
+        final userId = _authService.currentUserId;
+        if (userId == null) {
+          throw Exception('User not authenticated');
+        }
+
+        // Generate a temporary message ID for the file path
+        final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+
+        fileUrl = await _fileUploadService.uploadMessageImage(
+          _selectedImage!,
+          userId,
+          tempMessageId,
+        );
+        fileName = _selectedImage!.name;
+        fileSize = await _selectedImage!.length();
+        messageType = 'image';
+      }
+
+      // Send message with or without file
       await _chatService.sendMessage(
         receiverId: widget.receiverId,
-        content: content,
+        content: content.isEmpty ? (fileName ?? 'Image') : content,
+        fileUrl: fileUrl,
+        fileName: fileName,
+        fileSize: fileSize,
+        messageType: messageType,
       );
+
+      // Clear inputs
       _messageController.clear();
+      setState(() {
+        _selectedImage = null;
+        _messageInputKey++; // Reset MessageInput widget to clear image
+      });
       _typingService.stopTyping(widget.receiverId);
 
       // Scroll to bottom after sending (reverse list, so 0 is bottom)
@@ -205,7 +257,20 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
     }
+  }
+
+  /// Handles image selection from MessageInput widget.
+  void _onImageSelected(XFile? image) {
+    setState(() {
+      _selectedImage = image;
+    });
   }
 
   @override
@@ -218,9 +283,32 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(child: _buildMessageList(theme)),
           if (_isOtherUserTyping) _buildTypingIndicator(theme),
+          if (_isUploading)
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spacingM),
+              color: theme.colorScheme.surface,
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: AppTheme.spacingM),
+                  Text(
+                    'Uploading image...',
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           MessageInput(
+            key: ValueKey(_messageInputKey),
             controller: _messageController,
             onSend: _sendMessage,
+            onImageSelected: _onImageSelected,
             hintText: 'Type a message...',
           ),
         ],
@@ -371,6 +459,8 @@ class _ChatScreenState extends State<ChatScreen> {
       onDelete: isMe && !message.isDeleted
           ? () => _handleDeleteMessage(message)
           : null,
+      fileUrl: message.fileUrl,
+      fileName: message.fileName,
     );
   }
 

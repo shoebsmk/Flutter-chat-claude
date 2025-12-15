@@ -183,18 +183,45 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
 
       if (confirmed == true && mounted) {
         // Send message
-        await _chatService.sendMessage(
-          receiverId: recipient.id,
-          content: intent['message']!,
-        );
-
-        if (mounted) {
-          _addMessage(
-            content: 'Message sent to ${recipient.username}',
-            isUser: false,
-            isSuccess: true,
-            recipientName: recipient.username,
+        try {
+          await _chatService.sendMessage(
+            receiverId: recipient.id,
+            content: intent['message']!,
           );
+
+          if (mounted) {
+            _addMessage(
+              content: 'Message sent to ${recipient.username}',
+              isUser: false,
+              isSuccess: true,
+              recipientName: recipient.username,
+            );
+          }
+        } on ChatException catch (e) {
+          if (mounted) {
+            _addMessage(
+              content: 'Failed to send message: ${e.message}',
+              isUser: false,
+              isSuccess: false,
+            );
+          }
+        } on AuthException catch (e) {
+          if (mounted) {
+            _addMessage(
+              content: 'Authentication error: ${e.message}',
+              isUser: false,
+              isSuccess: false,
+            );
+          }
+        } catch (e) {
+          debugPrint('Error sending message: $e');
+          if (mounted) {
+            _addMessage(
+              content: 'Failed to send message. Please try again.',
+              isUser: false,
+              isSuccess: false,
+            );
+          }
         }
       } else if (confirmed == false && mounted) {
         // User cancelled

@@ -32,7 +32,16 @@ class AICommandService {
         body: {'command': command.trim()},
       );
 
-      final data = response.data as Map<String, dynamic>;
+      // Validate response data exists and is a Map
+      if (response.data == null) {
+        throw AICommandException('No response from AI service');
+      }
+
+      final data = response.data;
+      if (data is! Map<String, dynamic>) {
+        debugPrint('Unexpected response type: ${data.runtimeType}');
+        throw AICommandException('Invalid response format from AI service');
+      }
       
       // Check if Edge Function returned an error
       if (data.containsKey('error')) {
@@ -45,10 +54,17 @@ class AICommandService {
           throw AICommandException(errorMessage);
         }
         
-        // Check if it's a Gemini API error
+        // Check if it's an AI API error
         if (errorMessage.toLowerCase().contains('gemini api error') ||
+            errorMessage.toLowerCase().contains('openai api error') ||
             errorMessage.toLowerCase().contains('ai service not configured')) {
           throw AICommandException('AI service error: $errorMessage');
+        }
+        
+        // Check for rate limiting
+        if (errorMessage.toLowerCase().contains('rate limit') ||
+            errorMessage.toLowerCase().contains('quota')) {
+          throw AICommandException('AI service is temporarily unavailable. Please try again in a moment.');
         }
         
         throw AICommandException('Failed to extract intent: $errorMessage');
@@ -67,19 +83,33 @@ class AICommandService {
         'message': message,
         'ai_response': aiResponse,
       };
+    } on AICommandException {
+      rethrow;
+    } on NetworkException {
+      rethrow;
     } catch (e) {
       debugPrint('Error extracting intent: $e');
       
-      if (e is AICommandException) {
-        rethrow;
-      }
+      // Handle Supabase function-specific errors
+      final errorString = e.toString().toLowerCase();
       
       // Handle network errors
-      final errorString = e.toString().toLowerCase();
       if (errorString.contains('network') || 
           errorString.contains('connection') ||
-          errorString.contains('timeout')) {
+          errorString.contains('timeout') ||
+          errorString.contains('timed out') ||
+          errorString.contains('socket')) {
         throw NetworkException('Network error. Please check your connection.');
+      }
+      
+      // Handle rate limiting
+      if (errorString.contains('rate limit') || errorString.contains('429')) {
+        throw AICommandException('Service is temporarily unavailable. Please try again in a moment.');
+      }
+      
+      // Handle function invocation errors
+      if (errorString.contains('function') || errorString.contains('invoke')) {
+        throw AICommandException('Service unavailable. Please try again later.');
       }
       
       throw AICommandException.extractionFailed();

@@ -85,6 +85,10 @@ class ChatService {
   Future<Message> sendMessage({
     required String receiverId,
     required String content,
+    String? fileUrl,
+    String? fileName,
+    int? fileSize,
+    String messageType = 'text',
   }) async {
     final userId = currentUserId;
     if (userId == null) {
@@ -92,19 +96,26 @@ class ChatService {
     }
 
     final trimmedContent = content.trim();
-    if (trimmedContent.isEmpty) {
+    // Allow empty content if there's a file attachment
+    if (trimmedContent.isEmpty && fileUrl == null) {
       throw exceptions.ChatException.emptyMessage();
     }
 
     try {
+      final messageData = {
+        'sender_id': userId,
+        'receiver_id': receiverId,
+        'content': trimmedContent,
+        'is_read': false,
+        'message_type': messageType,
+        if (fileUrl != null) 'file_url': fileUrl,
+        if (fileName != null) 'file_name': fileName,
+        if (fileSize != null) 'file_size': fileSize,
+      };
+
       final response = await _client
           .from('messages')
-          .insert({
-            'sender_id': userId,
-            'receiver_id': receiverId,
-            'content': trimmedContent,
-            'is_read': false,
-          })
+          .insert(messageData)
           .select()
           .single();
 

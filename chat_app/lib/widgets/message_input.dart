@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
@@ -9,12 +11,14 @@ class MessageInput extends StatefulWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
   final String? hintText;
+  final Function(XFile?)? onImageSelected;
 
   const MessageInput({
     super.key,
     required this.controller,
     required this.onSend,
     this.hintText,
+    this.onImageSelected,
   });
 
   @override
@@ -23,6 +27,16 @@ class MessageInput extends StatefulWidget {
 
 class _MessageInputState extends State<MessageInput> {
   bool _hasText = false;
+  XFile? _selectedImage;
+  final ImagePicker _imagePicker = ImagePicker();
+
+  /// Clears the selected image.
+  void clearImage() {
+    setState(() {
+      _selectedImage = null;
+    });
+    widget.onImageSelected?.call(null);
+  }
 
   @override
   void initState() {
@@ -47,10 +61,78 @@ class _MessageInputState extends State<MessageInput> {
   }
 
   void _handleSend() {
-    if (_hasText) {
+    if (_hasText || _selectedImage != null) {
       HapticService.instance.mediumImpact();
       widget.onSend();
     }
+  }
+
+  Future<void> _showImageSourceDialog() async {
+    if (!mounted) return;
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.image),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(LucideIcons.camera),
+                title: const Text('Take Photo'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (source != null) {
+      await _pickImage(source);
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+        });
+        widget.onImageSelected?.call(image);
+        HapticService.instance.lightImpact();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _selectedImage = null;
+    });
+    widget.onImageSelected?.call(null);
+    HapticService.instance.lightImpact();
   }
 
   @override
@@ -78,31 +160,97 @@ class _MessageInputState extends State<MessageInput> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Attachment button (placeholder)
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: Icon(
-                  LucideIcons.paperclip,
-                  size: 20,
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+            // Image preview
+            if (_selectedImage != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: AppTheme.spacingS),
+                height: 100,
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusM),
+                      child: kIsWeb
+                          ? Image.network(
+                              _selectedImage!.path,
+                              width: double.infinity,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: double.infinity,
+                                  height: 100,
+                                  color: theme.colorScheme.surfaceVariant,
+                                  child: const Icon(LucideIcons.image),
+                                );
+                              },
+                            )
+                          : Image.file(
+                              File(_selectedImage!.path),
+                              width: double.infinity,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: double.infinity,
+                                  height: 100,
+                                  color: theme.colorScheme.surfaceVariant,
+                                  child: const Icon(LucideIcons.image),
+                                );
+                              },
+                            ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            LucideIcons.x,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          onPressed: _removeImage,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                onPressed: () {
-                  // Placeholder for attachment functionality
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
               ),
-            ),
-            const SizedBox(width: AppTheme.spacingS),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Attachment button
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.surfaceDark : AppTheme.surfaceLight,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      LucideIcons.paperclip,
+                      size: 20,
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    onPressed: _showImageSourceDialog,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacingS),
             // Text input
             Expanded(
               child: Container(
@@ -139,39 +287,41 @@ class _MessageInputState extends State<MessageInput> {
               ),
             ),
             const SizedBox(width: AppTheme.spacingS),
-            // Send button
-            AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: _hasText
-                        ? AppTheme.primaryLight
-                        : theme.colorScheme.surface,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _hasText ? _handleSend : null,
-                      borderRadius: BorderRadius.circular(20),
-                      child: Icon(
-                        LucideIcons.send,
-                        size: 20,
-                        color: _hasText
-                            ? Colors.white
-                            : theme.colorScheme.onSurface.withOpacity(0.3),
+                // Send button
+                AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: (_hasText || _selectedImage != null)
+                            ? AppTheme.primaryLight
+                            : theme.colorScheme.surface,
+                        shape: BoxShape.circle,
                       ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: (_hasText || _selectedImage != null) ? _handleSend : null,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Icon(
+                            LucideIcons.send,
+                            size: 20,
+                            color: (_hasText || _selectedImage != null)
+                                ? Colors.white
+                                : theme.colorScheme.onSurface.withOpacity(0.3),
+                          ),
+                        ),
+                      ),
+                    )
+                    .animate(target: (_hasText || _selectedImage != null) ? 1 : 0)
+                    .scale(
+                      begin: const Offset(0.9, 0.9),
+                      end: const Offset(1.0, 1.0),
+                      duration: 200.ms,
                     ),
-                  ),
-                )
-                .animate(target: _hasText ? 1 : 0)
-                .scale(
-                  begin: const Offset(0.9, 0.9),
-                  end: const Offset(1.0, 1.0),
-                  duration: 200.ms,
-                ),
+              ],
+            ),
           ],
         ),
       ),

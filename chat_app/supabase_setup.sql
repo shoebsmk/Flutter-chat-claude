@@ -111,3 +111,31 @@ $$;
 
 -- 15. Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION delete_message(UUID) TO authenticated;
+
+-- 16. Add file attachment columns to messages table
+ALTER TABLE messages 
+ADD COLUMN IF NOT EXISTS message_type TEXT DEFAULT 'text',
+ADD COLUMN IF NOT EXISTS file_url TEXT,
+ADD COLUMN IF NOT EXISTS file_name TEXT,
+ADD COLUMN IF NOT EXISTS file_size INTEGER;
+
+-- 17. Create storage bucket for message attachments
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('message-attachments', 'message-attachments', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 18. Storage policy: Users can upload message attachments
+DROP POLICY IF EXISTS "Users can upload message attachments" ON storage.objects;
+CREATE POLICY "Users can upload message attachments"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'message-attachments'
+);
+
+-- 19. Storage policy: Anyone can view message attachments (public bucket)
+DROP POLICY IF EXISTS "Anyone can view message attachments" ON storage.objects;
+CREATE POLICY "Anyone can view message attachments"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'message-attachments');

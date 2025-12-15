@@ -24,6 +24,18 @@ class Message {
   /// When the message was deleted (null if not deleted).
   final DateTime? deletedAt;
 
+  /// Type of message: 'text', 'image', 'file', etc.
+  final String messageType;
+
+  /// URL to the attached file (if any).
+  final String? fileUrl;
+
+  /// Original filename of the attached file (if any).
+  final String? fileName;
+
+  /// Size of the attached file in bytes (if any).
+  final int? fileSize;
+
   const Message({
     this.id,
     required this.senderId,
@@ -32,6 +44,10 @@ class Message {
     this.isRead = false,
     required this.createdAt,
     this.deletedAt,
+    this.messageType = 'text',
+    this.fileUrl,
+    this.fileName,
+    this.fileSize,
   });
 
   /// Creates a Message from a Supabase JSON response.
@@ -58,6 +74,10 @@ class Message {
       isRead: json['is_read'] as bool? ?? false,
       createdAt: createdAt,
       deletedAt: AppDateUtils.parse(json['deleted_at']),
+      messageType: json['message_type']?.toString() ?? 'text',
+      fileUrl: json['file_url']?.toString(),
+      fileName: json['file_name']?.toString(),
+      fileSize: json['file_size'] as int?,
     );
   }
 
@@ -69,6 +89,10 @@ class Message {
       'receiver_id': receiverId,
       'content': content,
       'is_read': isRead,
+      'message_type': messageType,
+      if (fileUrl != null) 'file_url': fileUrl,
+      if (fileName != null) 'file_name': fileName,
+      if (fileSize != null) 'file_size': fileSize,
     };
   }
 
@@ -81,6 +105,10 @@ class Message {
     bool? isRead,
     DateTime? createdAt,
     DateTime? deletedAt,
+    String? messageType,
+    String? fileUrl,
+    String? fileName,
+    int? fileSize,
   }) {
     return Message(
       id: id ?? this.id,
@@ -90,6 +118,10 @@ class Message {
       isRead: isRead ?? this.isRead,
       createdAt: createdAt ?? this.createdAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      messageType: messageType ?? this.messageType,
+      fileUrl: fileUrl ?? this.fileUrl,
+      fileName: fileName ?? this.fileName,
+      fileSize: fileSize ?? this.fileSize,
     );
   }
 
@@ -106,6 +138,9 @@ class Message {
 
   /// Returns true if this message has been deleted.
   bool get isDeleted => deletedAt != null;
+
+  /// Returns true if this message contains an image attachment.
+  bool get hasImage => messageType == 'image' && fileUrl != null;
 
   @override
   bool operator ==(Object other) {

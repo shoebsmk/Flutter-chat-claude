@@ -13,6 +13,8 @@ class MessageBubble extends StatefulWidget {
   final bool showTimestamp;
   final bool isDeletable;
   final VoidCallback? onDelete;
+  final String? fileUrl;
+  final String? fileName;
 
   const MessageBubble({
     super.key,
@@ -24,6 +26,8 @@ class MessageBubble extends StatefulWidget {
     this.showTimestamp = true,
     this.isDeletable = false,
     this.onDelete,
+    this.fileUrl,
+    this.fileName,
   });
 
   @override
@@ -56,6 +60,39 @@ class _MessageBubbleState extends State<MessageBubble> {
 
   String _getFullTimestamp(DateTime dateTime) {
     return DateFormat('MMM d, y h:mm a').format(dateTime);
+  }
+
+  void _showImageFullScreen(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Center(
+                    child: Icon(
+                      LucideIcons.image,
+                      color: Colors.white,
+                      size: 64,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showDeleteOptions(BuildContext context) {
@@ -197,10 +234,70 @@ class _MessageBubbleState extends State<MessageBubble> {
                               ),
                             ),
                           ),
-                        Text(
-                          widget.content,
-                          style: AppTheme.bodyMedium.copyWith(color: textColor),
-                        ),
+                        // Display image if fileUrl exists
+                        if (widget.fileUrl != null)
+                          GestureDetector(
+                            onTap: () => _showImageFullScreen(context, widget.fileUrl!),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusS),
+                              child: Image.network(
+                                widget.fileUrl!,
+                                width: 250,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    width: 250,
+                                    height: 200,
+                                    color: theme.colorScheme.surfaceVariant,
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress.expectedTotalBytes != null
+                                            ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: 250,
+                                    height: 200,
+                                    color: theme.colorScheme.surfaceVariant,
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          LucideIcons.image,
+                                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                        ),
+                                        const SizedBox(height: AppTheme.spacingS),
+                                        Text(
+                                          'Failed to load image',
+                                          style: AppTheme.bodySmall.copyWith(
+                                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        // Display text content (if not empty or if it's not just the filename placeholder)
+                        if (widget.content.isNotEmpty && 
+                            (widget.fileUrl == null || widget.content != widget.fileName))
+                          Padding(
+                            padding: EdgeInsets.only(
+                              top: widget.fileUrl != null ? AppTheme.spacingS : 0,
+                            ),
+                            child: Text(
+                              widget.content,
+                              style: AppTheme.bodyMedium.copyWith(color: textColor),
+                            ),
+                          ),
                         if (widget.showTimestamp)
                           Padding(
                             padding: const EdgeInsets.only(

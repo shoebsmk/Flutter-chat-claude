@@ -125,7 +125,15 @@ class GeminiProvider implements AIProvider {
         });
 
         if (response.ok) {
-          const data = await response.json();
+          let data: any;
+          try {
+            data = await response.json();
+          } catch (error) {
+            console.error('[Gemini] Failed to parse JSON response:', error);
+            lastError = 'Invalid JSON response from AI';
+            continue;
+          }
+
           const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
           
           if (!content) {
@@ -144,7 +152,20 @@ class GeminiProvider implements AIProvider {
         } else {
           const errorData = await response.text();
           console.log(`[Gemini] Model ${modelName} failed:`, response.status);
-          lastError = errorData;
+          
+          // Check for rate limiting
+          if (response.status === 429) {
+            lastError = 'Rate limit exceeded. Please try again later.';
+            continue;
+          }
+          
+          // Check for authentication errors
+          if (response.status === 401 || response.status === 403) {
+            lastError = 'API key is invalid or expired';
+            continue;
+          }
+          
+          lastError = errorData || `HTTP ${response.status}`;
           continue;
         }
       } catch (error) {
@@ -206,7 +227,15 @@ class OpenAIProvider implements AIProvider {
         });
 
         if (response.ok) {
-          const data = await response.json();
+          let data: any;
+          try {
+            data = await response.json();
+          } catch (error) {
+            console.error('[OpenAI] Failed to parse JSON response:', error);
+            lastError = 'Invalid JSON response from AI';
+            continue;
+          }
+
           const content = data.choices?.[0]?.message?.content;
           
           if (!content) {
@@ -225,7 +254,20 @@ class OpenAIProvider implements AIProvider {
         } else {
           const errorData = await response.text();
           console.log(`[OpenAI] Model ${modelName} failed:`, response.status);
-          lastError = errorData;
+          
+          // Check for rate limiting
+          if (response.status === 429) {
+            lastError = 'Rate limit exceeded. Please try again later.';
+            continue;
+          }
+          
+          // Check for authentication errors
+          if (response.status === 401 || response.status === 403) {
+            lastError = 'API key is invalid or expired';
+            continue;
+          }
+          
+          lastError = errorData || `HTTP ${response.status}`;
           continue;
         }
       } catch (error) {
@@ -272,7 +314,18 @@ serve(async (req) => {
   }
 
   try {
-    const { command, provider, model } = await req.json();
+    // Parse and validate request body
+    let requestBody: { command?: string; provider?: string; model?: string };
+    try {
+      requestBody = await req.json();
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: jsonHeaders }
+      );
+    }
+
+    const { command, provider, model } = requestBody;
     
     // Validate input
     if (!command || typeof command !== 'string' || command.trim().length === 0) {

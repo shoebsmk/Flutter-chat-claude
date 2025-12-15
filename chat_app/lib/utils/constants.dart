@@ -21,6 +21,16 @@ class AppConstants {
   static const int maxImageSizeBytes = 5 * 1024 * 1024; // 5MB
   static const int maxImageDimension = 2000;
 
+  // Message attachment validation
+  static const int maxAttachmentSizeBytes = 5 * 1024 * 1024; // 5MB
+  static const String messageAttachmentsBucket = 'message-attachments';
+  static const List<String> allowedImageMimeTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+  ];
+
   // Database table names
   static const String usersTable = 'users';
   static const String messagesTable = 'messages';
