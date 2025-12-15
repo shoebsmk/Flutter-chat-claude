@@ -164,6 +164,17 @@ After successful deployment, your app will be available at:
   2. Verify the workflow completed successfully before Pages tries to deploy
   3. Make sure `build/web` directory exists and contains `index.html`
 
+### "File not found" Error
+
+- **Solution**:
+  1. **Verify base-href is correct**: The workflow uses `--base-href="/Flutter-chat-claude/"` which should match your repository name
+  2. **Check for .nojekyll file**: The workflow automatically creates this file to prevent Jekyll processing
+  3. **Check for 404.html**: The workflow creates this file for client-side routing
+  4. **Verify deployment completed**: Go to **Actions** tab and ensure the workflow completed successfully
+  5. **Wait a few minutes**: GitHub Pages can take 1-5 minutes to update after deployment
+  6. **Clear browser cache**: Try accessing the site in an incognito/private window
+  7. **Check the correct URL**: Make sure you're accessing `https://shoebsmk.github.io/Flutter-chat-claude/` (with trailing slash)
+
 ### App Not Accessible After Deployment
 
 - **Solution**:
