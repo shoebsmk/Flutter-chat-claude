@@ -89,13 +89,35 @@ In the Vercel dashboard **Configure Project** page:
 - Build Command: `bash build.sh`
 - Output Directory: `build/web`
 
-## Step 5: Deploy
+## Step 5: Commit and Push Configuration Files
 
-1. Click **Deploy** button
-2. Wait for the build to complete (first build may take 5-10 minutes as it installs Flutter SDK)
-3. Once complete, you'll see a success message with your deployment URL
+**IMPORTANT:** Before deploying, make sure these files are committed and pushed to your repository:
 
-## Step 6: Verify Deployment
+```bash
+# Check which files need to be committed
+git status
+
+# Add the configuration files
+git add vercel.json build.sh VERCEL_DEPLOYMENT.md DEPLOY_TO_VERCEL.md
+
+# Commit the changes
+git commit -m "Add Vercel deployment configuration"
+
+# Push to your repository
+git push
+```
+
+**Why this matters:** Vercel builds from your Git repository. If `vercel.json` and `build.sh` aren't in the repo, Vercel won't have the correct build configuration and you'll get 404 errors.
+
+## Step 6: Deploy
+
+1. Go to your Vercel project dashboard
+2. If you just pushed, Vercel should automatically trigger a new deployment
+3. Or manually click **Deploy** button
+4. Wait for the build to complete (first build may take 5-10 minutes as it installs Flutter SDK)
+5. Once complete, you'll see a success message with your deployment URL
+
+## Step 7: Verify Deployment
 
 1. Click on your deployment URL to open the app
 2. Test the app:
@@ -109,10 +131,30 @@ In the Vercel dashboard **Configure Project** page:
 
 If you see a 404 error when accessing your deployed app:
 
-1. **Redeploy after configuration changes:**
-   - The `vercel.json` and `build.sh` have been updated
+👉 **See detailed troubleshooting guide:** [VERCEL_404_TROUBLESHOOTING.md](VERCEL_404_TROUBLESHOOTING.md)
+
+**Quick fixes:**
+
+1. **Check if configuration files are in your repository:**
+   - Go to your Git repository (GitHub/GitLab/Bitbucket)
+   - Verify `vercel.json` and `build.sh` exist in the root directory
+   - **If they're missing:** Commit and push them, then redeploy
+   
+2. **Verify build output in Vercel logs:**
+   - Go to Vercel dashboard → **Deployments** → Click on deployment → **Build Logs**
+   - Look for "✅ Verified: index.html exists in build/web"
+   - If you see "❌ ERROR: index.html not found", the build failed
+   
+3. **Check Vercel project settings:**
+   - Go to **Settings** → **General**
+   - Verify **Output Directory** is `build/web`
+   - Verify **Build Command** is `bash build.sh`
+   
+4. **Redeploy after configuration changes:**
+   - If you just added/updated `vercel.json` or `build.sh`, push the changes
    - Go to your Vercel project → **Deployments** tab
    - Click **Redeploy** on the latest deployment, or push a new commit to trigger a rebuild
+   - **Clear build cache** before redeploying (Settings → General → Clear Build Cache)
 
 2. **Verify build output:**
    - Check build logs in Vercel dashboard

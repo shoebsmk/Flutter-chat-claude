@@ -48,3 +48,15 @@ fi
 echo "✅ Build completed successfully!"
 echo "📦 Output directory: build/web"
 
+# Verify build output
+if [ ! -f "build/web/index.html" ]; then
+  echo "❌ ERROR: index.html not found in build/web!"
+  echo "Build output contents:"
+  ls -la build/web/ || echo "build/web directory does not exist"
+  exit 1
+fi
+
+echo "✅ Verified: index.html exists in build/web"
+echo "📋 Build output files:"
+ls -1 build/web/ | head -10
+
