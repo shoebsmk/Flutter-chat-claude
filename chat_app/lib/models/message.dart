@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import '../utils/date_utils.dart';
+
 /// Represents a chat message between two users.
 class Message {
   /// Unique identifier for the message.
@@ -33,14 +36,28 @@ class Message {
 
   /// Creates a Message from a Supabase JSON response.
   factory Message.fromJson(Map<String, dynamic> json) {
+    // Use AppDateUtils for consistent date parsing across the app
+    // parseOrDefault ensures we have a valid DateTime even if parsing fails
+    // However, if created_at is missing, this indicates a data issue that should be logged
+    final createdAtValue = json['created_at'];
+    final parsedDate = AppDateUtils.parse(createdAtValue);
+    final createdAt = parsedDate ?? DateTime.now();
+    
+    // Log warning if created_at was missing or couldn't be parsed
+    if (createdAtValue == null) {
+      debugPrint('Warning: Message missing created_at timestamp. Using current time as fallback.');
+    } else if (parsedDate == null) {
+      debugPrint('Warning: Message created_at could not be parsed: $createdAtValue');
+    }
+
     return Message(
       id: json['id']?.toString(),
       senderId: json['sender_id']?.toString() ?? '',
       receiverId: json['receiver_id']?.toString() ?? '',
       content: json['content']?.toString() ?? '',
       isRead: json['is_read'] as bool? ?? false,
-      createdAt: _parseDateTime(json['created_at']) ?? DateTime.now(),
-      deletedAt: _parseDateTime(json['deleted_at']),
+      createdAt: createdAt,
+      deletedAt: AppDateUtils.parse(json['deleted_at']),
     );
   }
 
@@ -74,14 +91,6 @@ class Message {
       createdAt: createdAt ?? this.createdAt,
       deletedAt: deletedAt ?? this.deletedAt,
     );
-  }
-
-  /// Parses a DateTime from various formats.
-  static DateTime? _parseDateTime(dynamic value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    if (value is String) return DateTime.tryParse(value);
-    return null;
   }
 
   /// Returns true if this message was sent by the given user ID.

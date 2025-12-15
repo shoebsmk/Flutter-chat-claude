@@ -7,11 +7,45 @@ class AppDateUtils {
 
   /// Parses a DateTime from various formats (DateTime, String, or null).
   ///
+  /// Handles Supabase timestamp formats including:
+  /// - ISO 8601 strings (e.g., "2024-01-01T12:00:00Z")
+  /// - DateTime objects
+  /// - Timestamp strings with timezone information
+  ///
+  /// Supabase stores timestamps as UTC. Strings without timezone are treated as UTC
+  /// and converted to local time for proper comparison with DateTime.now().
   /// Returns null if the value cannot be parsed.
   static DateTime? parse(dynamic value) {
     if (value == null) return null;
     if (value is DateTime) return value;
-    if (value is String) return DateTime.tryParse(value);
+    if (value is String) {
+      // Try parsing as ISO 8601 string (Supabase's default format)
+      var parsed = DateTime.tryParse(value);
+      
+      // If parsing succeeds but the string doesn't have timezone info, 
+      // Supabase timestamps are stored in UTC, so we need to treat them as UTC
+      if (parsed != null) {
+        final hasTimezone = value.endsWith('Z') || 
+                           RegExp(r'[+-]\d{2}:?\d{2}$').hasMatch(value);
+        if (!hasTimezone) {
+          // String has no timezone indicator - treat as UTC (Supabase stores in UTC)
+          // Convert to local time for proper comparison with DateTime.now()
+          parsed = DateTime.utc(
+            parsed.year,
+            parsed.month,
+            parsed.day,
+            parsed.hour,
+            parsed.minute,
+            parsed.second,
+            parsed.millisecond,
+            parsed.microsecond,
+          ).toLocal();
+        }
+      }
+      
+      if (parsed != null) return parsed;
+      return null;
+    }
     return null;
   }
 
