@@ -150,3 +150,4 @@ if __name__ == '__main__':
     icon.save(output_path, 'PNG', optimize=True)
     print(f"Icon saved to {output_path}")
 
+

@@ -155,10 +155,10 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _buildLogo() {
-    return const Icon(
-      LucideIcons.messageCircle,
-      size: 80,
-      color: AppTheme.primaryLight,
+    return Image.asset(
+      'assets/icon/app_icon.png',
+      width: 80,
+      height: 80,
     ).animate().scale(delay: 100.ms, duration: 400.ms).fadeIn(delay: 100.ms);
   }
 
