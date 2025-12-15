@@ -1,30 +1,76 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:chat_app/main.dart';
+import 'package:chat_app/models/message.dart';
+import 'package:chat_app/models/user.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('Critical Functionality Smoke Tests', () {
+    test('Message model can be created and serialized', () {
+      final message = Message(
+        id: 'test-msg',
+        senderId: 'user-1',
+        receiverId: 'user-2',
+        content: 'Test message',
+        createdAt: DateTime.now(),
+      );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      expect(message.id, 'test-msg');
+      expect(message.content, 'Test message');
+      
+      final json = message.toJson();
+      expect(json['sender_id'], 'user-1');
+      expect(json['receiver_id'], 'user-2');
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('User model can be created and serialized', () {
+      final user = User(
+        id: 'test-user',
+        username: 'testuser',
+        email: 'test@example.com',
+      );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      expect(user.id, 'test-user');
+      expect(user.username, 'testuser');
+      
+      final json = user.toJson();
+      expect(json['id'], 'test-user');
+      expect(json['username'], 'testuser');
+    });
+
+    test('Message equality works correctly', () {
+      final msg1 = Message(
+        id: 'same-id',
+        senderId: 'user-1',
+        receiverId: 'user-2',
+        content: 'Message 1',
+        createdAt: DateTime.now(),
+      );
+
+      final msg2 = Message(
+        id: 'same-id',
+        senderId: 'user-3',
+        receiverId: 'user-4',
+        content: 'Message 2',
+        createdAt: DateTime.now(),
+      );
+
+      expect(msg1 == msg2, true);
+    });
+
+    test('User online status calculation works', () {
+      final onlineUser = User(
+        id: 'user-1',
+        username: 'test',
+        lastSeen: DateTime.now().subtract(const Duration(seconds: 30)),
+      );
+
+      final offlineUser = User(
+        id: 'user-2',
+        username: 'test',
+        lastSeen: DateTime.now().subtract(const Duration(minutes: 5)),
+      );
+
+      expect(onlineUser.isOnline, true);
+      expect(offlineUser.isOnline, false);
+    });
   });
 }
