@@ -56,6 +56,7 @@ class AICommandService {
       
       final recipientQuery = data['recipient_query']?.toString() ?? '';
       final message = data['message']?.toString() ?? '';
+      final aiResponse = data['ai_response']?.toString() ?? '';
 
       if (recipientQuery.isEmpty && message.isEmpty) {
         throw AICommandException.extractionFailed();
@@ -64,6 +65,7 @@ class AICommandService {
       return {
         'recipient_query': recipientQuery,
         'message': message,
+        'ai_response': aiResponse,
       };
     } catch (e) {
       debugPrint('Error extracting intent: $e');

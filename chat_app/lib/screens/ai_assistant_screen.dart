@@ -127,8 +127,11 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
       // Validate extracted message
       if (intent['message']?.isEmpty ?? true) {
         if (mounted) {
+          final aiResponse = intent['ai_response']?.toString() ?? '';
           _addMessage(
-            content: 'Could not extract message from command',
+            content: aiResponse.isNotEmpty 
+                ? aiResponse 
+                : "I'm here to help! Please tell me who you'd like to text and what message you want to send. For example: \"Send John Hello there\" or \"Message Sarah I'll be late\"",
             isUser: false,
             isSuccess: false,
           );
@@ -140,8 +143,11 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
       final recipientQuery = intent['recipient_query'] ?? '';
       if (recipientQuery.isEmpty) {
         if (mounted) {
+          final aiResponse = intent['ai_response']?.toString() ?? '';
           _addMessage(
-            content: 'Could not identify recipient. Please include a name in your command.',
+            content: aiResponse.isNotEmpty 
+                ? aiResponse 
+                : 'Could not identify recipient. Please include a name in your command.',
             isUser: false,
             isSuccess: false,
           );
@@ -156,8 +162,11 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
 
       if (recipient == null) {
         if (mounted) {
+          final aiResponse = intent['ai_response']?.toString() ?? '';
           _addMessage(
-            content: 'Recipient "$recipientQuery" not found. Please check the name and try again.',
+            content: aiResponse.isNotEmpty 
+                ? aiResponse 
+                : 'Recipient "$recipientQuery" not found. Please check the name and try again.',
             isUser: false,
             isSuccess: false,
           );
@@ -196,6 +205,8 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
       }
     } on AICommandException catch (e) {
       if (mounted) {
+        // Try to get ai_response from the exception context if available
+        // For now, use the exception message
         _addMessage(
           content: 'Failed to send: ${e.message}',
           isUser: false,
@@ -308,7 +319,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Assistant'),
+        title: const Text('Chat Assist'),
       ),
       body: _isLoadingUsers
           ? const Center(child: CircularProgressIndicator())
@@ -337,7 +348,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.smart_toy,
+                                  Icons.auto_awesome,
                                   size: 72,
                                   color: theme.colorScheme.onSurface.withOpacity(0.2),
                                 ),
@@ -591,7 +602,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
             Padding(
               padding: const EdgeInsets.only(right: AppTheme.spacingS),
               child: Icon(
-                Icons.smart_toy,
+                Icons.auto_awesome,
                 size: 20,
                 color: theme.colorScheme.primary.withOpacity(0.7),
               ),

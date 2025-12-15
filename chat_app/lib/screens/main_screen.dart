@@ -6,7 +6,7 @@ import 'ai_assistant_screen.dart';
 /// 
 /// Contains two tabs:
 /// - Chats: Existing chat list screen
-/// - AI Assistant: New AI command interface
+/// - Chat Assist: New AI command interface
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -39,8 +39,8 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Chats',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.smart_toy),
-            label: 'AI Assistant',
+            icon: Icon(Icons.auto_awesome),
+            label: 'Chat Assist',
           ),
         ],
       ),

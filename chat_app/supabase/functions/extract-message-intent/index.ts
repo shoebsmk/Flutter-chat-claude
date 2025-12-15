@@ -13,7 +13,7 @@ type ModelConfig = {
 
 interface AIProvider {
   name: Provider;
-  extractIntent(command: string, model?: string): Promise<{ recipient_query: string; message: string }>;
+  extractIntent(command: string, model?: string): Promise<{ recipient_query: string; message: string; ai_response?: string }>;
 }
 
 // Helper function to create CORS headers
@@ -29,7 +29,7 @@ const jsonHeaders = {
 };
 
 // Helper function to parse and clean JSON response
-function parseJsonResponse(content: string): { recipient_query: string; message: string } | null {
+function parseJsonResponse(content: string): { recipient_query: string; message: string; ai_response?: string } | null {
   try {
     let cleanedContent = content.trim();
     // Remove markdown code blocks if present
@@ -40,10 +40,39 @@ function parseJsonResponse(content: string): { recipient_query: string; message:
     return {
       recipient_query: parsed.recipient_query || '',
       message: parsed.message || '',
+      ai_response: parsed.ai_response || '',
     };
   } catch {
     return null;
   }
+}
+
+// Helper function to generate the extraction prompt
+function createExtractionPrompt(command: string): string {
+  return `Extract recipient and message from this command:
+"${command.trim()}"
+
+Return ONLY valid JSON (no extra text):
+{
+  "recipient_query": "name or partial name, empty if missing",
+  "message": "message text, empty if missing",
+  "ai_response": "helpful response if extraction failed, empty if succeeded"
+}
+
+Rules:
+- If BOTH recipient_query and message are present → ai_response = ""
+- If EITHER is missing → ai_response should:
+  • Reference the user's actual words when helpful
+  • Explain what's missing in a friendly, natural way, no need to follow the example exactly
+  • if the user asking something weird, mention that's out of my scope, I purpose is to help with texting, not other stuff.
+  • Provide ONE example matching the user's style
+
+Examples:
+"Send Ahmed I'll be late"
+→ {"recipient_query":"Ahmed","message":"I'll be late","ai_response":""}
+
+"Send hello"
+→ {"recipient_query":"","message":"hello","ai_response":"I see you want to send 'hello', but I need to know who to send it to. Try: 'Send John hello'"}`;
 }
 
 // Gemini Provider Implementation
@@ -61,8 +90,8 @@ class GeminiProvider implements AIProvider {
     this.apiKey = apiKey;
   }
 
-  async extractIntent(command: string, model?: string): Promise<{ recipient_query: string; message: string }> {
-    const prompt = `Extract recipient name/query and message text from this command: "${command.trim()}"\n\nReturn ONLY valid JSON with this exact format (no other text, no markdown, no code blocks):\n{"recipient_query": "name or partial name", "message": "message text"}\n\nExamples:\n- "Send Ahmed I'll be late" -> {"recipient_query": "Ahmed", "message": "I'll be late"}\n- "Message John Hello there" -> {"recipient_query": "John", "message": "Hello there"}\n- "Tell Sarah Meeting cancelled" -> {"recipient_query": "Sarah", "message": "Meeting cancelled"}`;
+  async extractIntent(command: string, model?: string): Promise<{ recipient_query: string; message: string; ai_response?: string }> {
+    const prompt = createExtractionPrompt(command);
 
     const requestBody = {
       contents: [{
@@ -144,8 +173,8 @@ class OpenAIProvider implements AIProvider {
     this.apiKey = apiKey;
   }
 
-  async extractIntent(command: string, model?: string): Promise<{ recipient_query: string; message: string }> {
-    const prompt = `Extract recipient name/query and message text from this command: "${command.trim()}"\n\nReturn ONLY valid JSON with this exact format (no other text, no markdown, no code blocks):\n{"recipient_query": "name or partial name", "message": "message text"}\n\nExamples:\n- "Send Ahmed I'll be late" -> {"recipient_query": "Ahmed", "message": "I'll be late"}\n- "Message John Hello there" -> {"recipient_query": "John", "message": "Hello there"}\n- "Tell Sarah Meeting cancelled" -> {"recipient_query": "Sarah", "message": "Meeting cancelled"}`;
+  async extractIntent(command: string, model?: string): Promise<{ recipient_query: string; message: string; ai_response?: string }> {
+    const prompt = createExtractionPrompt(command);
 
     const modelsToTry = model ? [model] : this.defaultModels;
     let lastError: string | null = null;
@@ -165,7 +194,7 @@ class OpenAIProvider implements AIProvider {
             messages: [
               {
                 role: 'system',
-                content: 'You are a helpful assistant that extracts recipient names and messages from natural language commands. Always return valid JSON only.',
+                content: 'You are a helpful assistant that extracts recipient names and messages from natural language commands. Always return valid JSON only. When extraction fails (empty recipient_query or message), generate a natural, conversational, and contextual response in the ai_response field. The response should sound human-like, reference the user\'s actual command, explain what\'s missing naturally, and provide one relevant example. Vary your wording - avoid template phrases and robotic language. No need to follow the example exactly.',
               },
               {
                 role: 'user',
@@ -283,6 +312,7 @@ serve(async (req) => {
         JSON.stringify({
           recipient_query: result.recipient_query,
           message: result.message,
+          ai_response: result.ai_response || '',
         }),
         { headers: jsonHeaders }
       );
@@ -301,6 +331,7 @@ serve(async (req) => {
             JSON.stringify({
               recipient_query: result.recipient_query,
               message: result.message,
+              ai_response: result.ai_response || '',
             }),
             { headers: jsonHeaders }
           );

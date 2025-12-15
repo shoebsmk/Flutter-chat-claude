@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'screens/auth_screen.dart';
 import 'screens/main_screen.dart';
@@ -44,6 +46,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late ThemeMode _themeMode;
   final _authService = AuthService();
+  StreamSubscription<AuthState>? _authStateSubscription;
+  bool _isAuthenticated = false;
   
   static _MyAppState? _instance;
 
@@ -55,10 +59,40 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _themeMode = widget.initialThemeMode;
     _instance = this;
+    
+    // Initialize auth state
+    _isAuthenticated = _authService.isAuthenticated;
+    
+    // Listen to auth state changes to handle session restoration
+    // This is critical for first launch when Supabase restores the session asynchronously
+    _authStateSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
+      (AuthState state) {
+        final newAuthState = state.session != null;
+        if (newAuthState != _isAuthenticated && mounted) {
+          setState(() {
+            _isAuthenticated = newAuthState;
+          });
+        }
+      },
+    );
+    
+    // Also check auth state after a microtask to catch any session restoration
+    // that might happen right after initialization
+    Future.microtask(() {
+      if (mounted) {
+        final currentAuthState = _authService.isAuthenticated;
+        if (currentAuthState != _isAuthenticated) {
+          setState(() {
+            _isAuthenticated = currentAuthState;
+          });
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _authStateSubscription?.cancel();
     _instance = null;
     super.dispose();
   }
@@ -89,8 +123,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final isAuthenticated = _authService.isAuthenticated;
-
     return MaterialApp(
       title: 'Chat App',
       theme: AppTheme.lightTheme,
@@ -101,15 +133,15 @@ class _MyAppState extends State<MyApp> {
         switch (settings.name) {
           case '/':
             return _createRoute(
-              isAuthenticated ? const MainScreen() : const AuthScreen(),
+              _isAuthenticated ? const MainScreen() : const AuthScreen(),
             );
           default:
             return _createRoute(
-              isAuthenticated ? const MainScreen() : const AuthScreen(),
+              _isAuthenticated ? const MainScreen() : const AuthScreen(),
             );
         }
       },
-      home: isAuthenticated ? const MainScreen() : const AuthScreen(),
+      home: _isAuthenticated ? const MainScreen() : const AuthScreen(),
     );
   }
 
