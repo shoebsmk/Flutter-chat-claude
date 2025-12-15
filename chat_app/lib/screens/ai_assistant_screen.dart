@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../services/ai_command_service.dart';
 import '../services/user_service.dart';
 import '../services/chat_service.dart';
@@ -348,7 +349,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.auto_awesome,
+                                  LucideIcons.sparkles,
                                   size: 72,
                                   color: theme.colorScheme.onSurface.withOpacity(0.2),
                                 ),
@@ -390,7 +391,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(
-                                              Icons.lightbulb_outline,
+                                              LucideIcons.lightbulb,
                                               size: 16,
                                               color: theme.colorScheme.primary.withOpacity(0.7),
                                             ),
@@ -525,7 +526,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                                             ),
                                           )
                                         : const Icon(
-                                            Icons.send,
+                                            LucideIcons.send,
                                             color: Colors.white,
                                             size: 20,
                                           ),
@@ -602,7 +603,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
             Padding(
               padding: const EdgeInsets.only(right: AppTheme.spacingS),
               child: Icon(
-                Icons.auto_awesome,
+                LucideIcons.sparkles,
                 size: 20,
                 color: theme.colorScheme.primary.withOpacity(0.7),
               ),
@@ -649,7 +650,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                       if (!isUser && isSuccess != null) ...[
                         const SizedBox(width: AppTheme.spacingXS),
                         Icon(
-                          isSuccess ? Icons.check_circle : Icons.error,
+                          isSuccess ? LucideIcons.checkCircle2 : LucideIcons.alertCircle,
                           size: 16,
                           color: isSuccess
                               ? AppTheme.successLight
@@ -674,7 +675,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
             Padding(
               padding: const EdgeInsets.only(left: AppTheme.spacingXS),
               child: Icon(
-                Icons.done_all,
+                LucideIcons.checkCheck,
                 size: 16,
                 color: textColor.withOpacity(0.7),
               ),

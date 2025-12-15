@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../models/user.dart' as models;
 import '../services/user_service.dart';
 import '../services/profile_service.dart';
@@ -377,7 +378,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: AppTheme.errorLight, size: 22),
+          const Icon(LucideIcons.alertCircle, color: AppTheme.errorLight, size: 22),
           const SizedBox(width: AppTheme.spacingS),
           Expanded(
             child: Text(
@@ -434,7 +435,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           style: AppTheme.bodyLarge,
           decoration: InputDecoration(
             hintText: 'Enter your username',
-            prefixIcon: const Icon(Icons.person_outlined),
+            prefixIcon: const Icon(LucideIcons.user),
             suffixIcon: _isCheckingUsername
                 ? const SizedBox(
                     width: 20,
@@ -445,7 +446,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     ),
                   )
                 : _isUsernameAvailable && _usernameController.text.isNotEmpty
-                    ? const Icon(Icons.check_circle, color: AppTheme.successLight)
+                    ? const Icon(LucideIcons.checkCircle2, color: AppTheme.successLight)
                     : null,
             helperText: '${_usernameController.text.length}/${AppConstants.maxUsernameLength}',
             helperStyle: AppTheme.bodySmall.copyWith(
@@ -497,7 +498,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           style: AppTheme.bodyLarge,
           decoration: InputDecoration(
             hintText: 'Tell us about yourself...',
-            prefixIcon: const Icon(Icons.description_outlined),
+            prefixIcon: const Icon(LucideIcons.fileText),
           ),
           validator: _validateBio,
         ),

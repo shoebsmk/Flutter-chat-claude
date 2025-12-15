@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'chat_list_screen.dart';
 import '../exceptions/app_exceptions.dart';
 import '../services/auth_service.dart';
@@ -155,7 +156,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Widget _buildLogo() {
     return const Icon(
-      Icons.chat_bubble_rounded,
+      LucideIcons.messageCircle,
       size: 80,
       color: AppTheme.primaryLight,
     ).animate().scale(delay: 100.ms, duration: 400.ms).fadeIn(delay: 100.ms);
@@ -198,7 +199,7 @@ class _AuthScreenState extends State<AuthScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: AppTheme.errorLight, size: 20),
+          const Icon(LucideIcons.alertCircle, color: AppTheme.errorLight, size: 20),
           const SizedBox(width: AppTheme.spacingS),
           Expanded(
             child: Text(
@@ -219,7 +220,7 @@ class _AuthScreenState extends State<AuthScreen> {
           validator: _validateEmail,
           decoration: const InputDecoration(
             labelText: 'Email',
-            prefixIcon: Icon(Icons.email_outlined),
+            prefixIcon: Icon(LucideIcons.mail),
           ),
         )
         .animate()
@@ -238,12 +239,12 @@ class _AuthScreenState extends State<AuthScreen> {
           onFieldSubmitted: _isSignUp ? null : (_) => _handleAuth(),
           decoration: InputDecoration(
             labelText: 'Password',
-            prefixIcon: const Icon(Icons.lock_outlined),
+            prefixIcon: const Icon(LucideIcons.lock),
             suffixIcon: IconButton(
               icon: Icon(
                 _obscurePassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
+                    ? LucideIcons.eye
+                    : LucideIcons.eyeOff,
               ),
               onPressed: () {
                 setState(() {
@@ -273,7 +274,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   onFieldSubmitted: (_) => _handleAuth(),
                   decoration: const InputDecoration(
                     labelText: 'Username',
-                    prefixIcon: Icon(Icons.person_outlined),
+                    prefixIcon: Icon(LucideIcons.user),
                   ),
                 ),
               ],

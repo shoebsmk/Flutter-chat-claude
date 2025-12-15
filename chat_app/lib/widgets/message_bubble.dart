@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/app_theme.dart';
 
 class MessageBubble extends StatefulWidget {
@@ -73,7 +74,7 @@ class _MessageBubbleState extends State<MessageBubble> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                leading: const Icon(LucideIcons.trash2, color: Colors.red),
                 title: const Text('Delete message'),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -81,7 +82,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.cancel),
+                leading: const Icon(LucideIcons.x),
                 title: const Text('Cancel'),
                 onTap: () => Navigator.of(context).pop(),
               ),
@@ -224,7 +225,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                 Padding(
                   padding: const EdgeInsets.only(left: AppTheme.spacingXS),
                   child: Icon(
-                    Icons.done_all,
+                    LucideIcons.checkCheck,
                     size: 16,
                     color: textColor.withOpacity(0.7),
                   ),

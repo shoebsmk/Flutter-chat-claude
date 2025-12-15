@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../exceptions/app_exceptions.dart';
 import '../models/message.dart';
 import '../models/user.dart';
@@ -16,6 +17,7 @@ import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/constants.dart';
 import '../utils/date_utils.dart';
+import 'contact_profile_screen.dart';
 
 /// Screen for displaying and sending messages in a conversation.
 class ChatScreen extends StatefulWidget {
@@ -229,7 +231,7 @@ class _ChatScreenState extends State<ChatScreen> {
   AppBar _buildAppBar(ThemeData theme) {
     return AppBar(
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(LucideIcons.arrowLeft),
         onPressed: () => Navigator.of(context).pop(),
       ),
       title: StreamBuilder(
@@ -255,46 +257,67 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? 'Last seen ${AppDateUtils.formatRelative(user!.lastSeen)}'
                       : 'Offline';
 
-          return Row(
-            children: [
-              UserAvatar(
-                username: widget.receiverName,
-                imageUrl: user?.avatarUrl,
-                size: 36,
-                showOnlineStatus: true,
-                isOnline: isOnline,
-              ),
-              const SizedBox(width: AppTheme.spacingM),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.receiverName,
-                      style: AppTheme.headingSmall.copyWith(
-                        color: theme.colorScheme.onSurface,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      statusText,
-                      style: AppTheme.caption.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                  ],
+          return InkWell(
+            onTap: () {
+              HapticService.instance.lightImpact();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ContactProfileScreen(
+                    userId: widget.receiverId,
+                  ),
                 ),
+              );
+            },
+            borderRadius: BorderRadius.circular(AppTheme.radiusM),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingS,
+                vertical: AppTheme.spacingS,
               ),
-            ],
+              child: Row(
+                children: [
+                  UserAvatar(
+                    username: widget.receiverName,
+                    imageUrl: user?.avatarUrl,
+                    size: 36,
+                    showOnlineStatus: true,
+                    isOnline: isOnline,
+                  ),
+                  const SizedBox(width: AppTheme.spacingM),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.receiverName,
+                          style: AppTheme.headingSmall.copyWith(
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          statusText,
+                          style: AppTheme.caption.copyWith(
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.more_vert),
+          icon: const Icon(LucideIcons.phone),
           onPressed: () {
-            // TODO: Show options menu
+            HapticService.instance.lightImpact();
+            _showCallComingSoonDialog();
           },
+          tooltip: 'Call',
         ),
       ],
     );
@@ -348,6 +371,81 @@ class _ChatScreenState extends State<ChatScreen> {
       onDelete: isMe && !message.isDeleted
           ? () => _handleDeleteMessage(message)
           : null,
+    );
+  }
+
+  /// Shows a dialog indicating that the call feature is coming soon.
+  void _showCallComingSoonDialog() {
+    final theme = Theme.of(context);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusL),
+        ),
+        contentPadding: const EdgeInsets.all(AppTheme.spacingXL),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Phone icon with circular background
+            Container(
+              padding: const EdgeInsets.all(AppTheme.spacingL),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                LucideIcons.phone,
+                size: 48,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacingXL),
+            // Title
+            Text(
+              'Call Feature',
+              style: AppTheme.headingMedium.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingM),
+            // Coming Soon message
+            Text(
+              'Coming Soon',
+              style: AppTheme.headingSmall.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingM),
+            // Description
+            Text(
+              "We're working on bringing you voice and video calls. Stay tuned!",
+              style: AppTheme.bodyMedium.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppTheme.spacingXL),
+            // OK Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppTheme.spacingM,
+                  ),
+                ),
+                child: const Text('OK'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -472,7 +570,7 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+          Icon(LucideIcons.alertCircle, size: 48, color: theme.colorScheme.error),
           const SizedBox(height: AppTheme.spacingM),
           Text(
             'Error loading messages',
@@ -497,7 +595,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.chat_bubble_outline,
+                LucideIcons.messageSquare,
                 size: 64,
                 color: theme.colorScheme.primary.withOpacity(0.6),
               ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'chat_list_screen.dart';
 import 'ai_assistant_screen.dart';
+import 'settings_screen.dart';
 
 /// Main screen container with bottom navigation bar.
 /// 
@@ -20,6 +22,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = [
     const ChatListScreen(),
     const AIAssistantScreen(),
+    const SettingsScreen(),
   ];
 
   @override
@@ -35,12 +38,16 @@ class _MainScreenState extends State<MainScreen> {
         },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.chat),
+            icon: Icon(LucideIcons.messageCircle),
             label: 'Chats',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.auto_awesome),
+            icon: Icon(LucideIcons.sparkles),
             label: 'Chat Assist',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(LucideIcons.cog),
+            label: 'Settings',
           ),
         ],
       ),

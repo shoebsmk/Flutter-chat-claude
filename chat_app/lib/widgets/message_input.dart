@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 
@@ -90,7 +91,7 @@ class _MessageInputState extends State<MessageInput> {
               ),
               child: IconButton(
                 icon: Icon(
-                  Icons.attach_file,
+                  LucideIcons.paperclip,
                   size: 20,
                   color: theme.colorScheme.onSurface.withOpacity(0.6),
                 ),
@@ -156,7 +157,7 @@ class _MessageInputState extends State<MessageInput> {
                       onTap: _hasText ? _handleSend : null,
                       borderRadius: BorderRadius.circular(20),
                       child: Icon(
-                        Icons.send_rounded,
+                        LucideIcons.send,
                         size: 20,
                         color: _hasText
                             ? Colors.white

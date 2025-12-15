@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'chat_screen.dart';
 import 'auth_screen.dart';
 import 'profile_edit_screen.dart';
-import 'settings_screen.dart';
 import '../models/user.dart' as models;
 import '../models/message.dart';
 import '../services/auth_service.dart';
@@ -269,18 +269,7 @@ class _ChatListScreenState extends State<ChatListScreen>
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const SettingsScreen(),
-              ),
-            );
-          },
-          tooltip: 'Settings',
-        ),
-        IconButton(
-          icon: const Icon(Icons.person),
+          icon: const Icon(LucideIcons.userCircle),
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -291,7 +280,7 @@ class _ChatListScreenState extends State<ChatListScreen>
           tooltip: 'Edit Profile',
         ),
         IconButton(
-          icon: const Icon(Icons.logout),
+          icon: const Icon(LucideIcons.power),
           onPressed: _handleLogout,
           tooltip: 'Logout',
         ),
@@ -306,10 +295,10 @@ class _ChatListScreenState extends State<ChatListScreen>
         controller: _searchController,
         decoration: InputDecoration(
           hintText: 'Search conversations...',
-          prefixIcon: const Icon(Icons.search),
+          prefixIcon: const Icon(LucideIcons.search),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: const Icon(LucideIcons.x),
                   onPressed: _searchController.clear,
                 )
               : null,
@@ -437,7 +426,7 @@ class _ChatListScreenState extends State<ChatListScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+          Icon(LucideIcons.alertCircle, size: 48, color: theme.colorScheme.error),
           const SizedBox(height: AppTheme.spacingM),
           Text(
             message,
@@ -462,7 +451,7 @@ class _ChatListScreenState extends State<ChatListScreen>
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.chat_bubble_outline,
+                LucideIcons.messageSquare,
                 size: 64,
                 color: theme.colorScheme.primary.withOpacity(0.6),
               ),
@@ -503,7 +492,7 @@ class _ChatListScreenState extends State<ChatListScreen>
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.search_off,
+                LucideIcons.searchX,
                 size: 64,
                 color: theme.colorScheme.onSurface.withOpacity(0.4),
               ),

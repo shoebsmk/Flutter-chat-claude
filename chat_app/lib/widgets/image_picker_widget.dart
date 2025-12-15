@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../theme/app_theme.dart';
 
@@ -92,7 +93,7 @@ class _ImagePickerWidgetState extends State<ImagePickerWidget> {
   Widget _buildPlaceholder() {
     return Center(
       child: Icon(
-        Icons.person,
+        LucideIcons.user,
         size: widget.size * 0.5,
         color: AppTheme.primaryLight,
       ),
@@ -120,7 +121,7 @@ class _ImagePickerWidgetState extends State<ImagePickerWidget> {
             borderRadius: BorderRadius.circular(widget.size * 0.35),
             onTap: _isLoading ? null : _showImageSourceDialog,
             child: Icon(
-              _selectedImage != null ? Icons.edit : Icons.camera_alt,
+              _selectedImage != null ? LucideIcons.pencil : LucideIcons.camera,
               size: widget.size * 0.2,
               color: Colors.white,
             ),
@@ -143,20 +144,20 @@ class _ImagePickerWidgetState extends State<ImagePickerWidget> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library),
+              leading: const Icon(LucideIcons.image),
               title: const Text('Choose from Gallery'),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             // Camera option not available on web
             if (!kIsWeb)
               ListTile(
-                leading: const Icon(Icons.camera_alt),
+                leading: const Icon(LucideIcons.camera),
                 title: const Text('Take Photo'),
                 onTap: () => Navigator.pop(context, ImageSource.camera),
               ),
             if (_selectedImage != null || widget.currentImageUrl != null)
               ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
+                leading: const Icon(LucideIcons.trash2, color: Colors.red),
                 title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(context);
