@@ -1,0 +1,67 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient from indigo to purple -->
+    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+    <!-- Radial gradient for depth -->
+    <radialGradient id="radialGradient" cx="50%" cy="30%" r="50%">
+      <stop offset="0%" style="stop-color:#818CF8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366F1;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Background with rounded corners -->
+  <rect width="1024" height="1024" rx="220" ry="220" fill="url(#mainGradient)"/>
+  
+  <!-- Chat bubble base -->
+  <g transform="translate(512, 512)">
+    <!-- Main chat bubble body -->
+    <rect x="-280" y="-200" width="560" height="400" rx="80" ry="80" fill="white" opacity="0.95"/>
+    
+    <!-- Chat bubble tail (pointing left) -->
+    <path d="M -280 0 L -340 -40 L -340 40 Z" fill="white" opacity="0.95"/>
+    
+    <!-- AI circuit pattern overlay on chat bubble -->
+    <g opacity="0.3">
+      <!-- Horizontal lines -->
+      <line x1="-240" y1="-120" x2="240" y2="-120" stroke="#6366F1" stroke-width="8" stroke-linecap="round"/>
+      <line x1="-240" y1="0" x2="240" y2="0" stroke="#6366F1" stroke-width="8" stroke-linecap="round"/>
+      <line x1="-240" y1="120" x2="240" y2="120" stroke="#6366F1" stroke-width="8" stroke-linecap="round"/>
+      
+      <!-- Vertical connections -->
+      <line x1="-160" y1="-120" x2="-160" y2="120" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round"/>
+      <line x1="0" y1="-120" x2="0" y2="120" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round"/>
+      <line x1="160" y1="-120" x2="160" y2="120" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round"/>
+      
+      <!-- AI nodes/circles -->
+      <circle cx="-160" cy="-120" r="20" fill="#6366F1"/>
+      <circle cx="0" cy="-120" r="20" fill="#6366F1"/>
+      <circle cx="160" cy="-120" r="20" fill="#6366F1"/>
+      <circle cx="-160" cy="0" r="20" fill="#8B5CF6"/>
+      <circle cx="0" cy="0" r="20" fill="#8B5CF6"/>
+      <circle cx="160" cy="0" r="20" fill="#8B5CF6"/>
+      <circle cx="-160" cy="120" r="20" fill="#6366F1"/>
+      <circle cx="0" cy="120" r="20" fill="#6366F1"/>
+      <circle cx="160" cy="120" r="20" fill="#6366F1"/>
+    </g>
+    
+    <!-- Sparkle/AI effect dots -->
+    <g opacity="0.6">
+      <circle cx="-200" cy="-160" r="12" fill="#818CF8"/>
+      <circle cx="200" cy="-160" r="12" fill="#818CF8"/>
+      <circle cx="-200" cy="160" r="12" fill="#A78BFA"/>
+      <circle cx="200" cy="160" r="12" fill="#A78BFA"/>
+    </g>
+  </g>
+  
+  <!-- Additional decorative elements outside chat bubble -->
+  <g opacity="0.4">
+    <circle cx="200" cy="200" r="30" fill="white"/>
+    <circle cx="824" cy="200" r="30" fill="white"/>
+    <circle cx="200" cy="824" r="30" fill="white"/>
+    <circle cx="824" cy="824" r="30" fill="white"/>
+  </g>
+</svg>
+

@@ -1,6 +1,6 @@
-# Chat App (AI‑assisted)
+# SmartChat
 
-A full-featured real-time chat application built with Flutter and Supabase. Features include real-time messaging with read receipts, typing indicators, presence tracking, profile editing, image and file attachments, contact profiles, and **Chat Assist** that lets you send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there".
+A full-featured AI-assisted real-time chat application built with Flutter and Supabase. SmartChat features include real-time messaging with read receipts, typing indicators, presence tracking, profile editing, image and file attachments, contact profiles, and **Chat Assist** that lets you send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there".
 
 ## Table of Contents
 
@@ -22,25 +22,37 @@ A full-featured real-time chat application built with Flutter and Supabase. Feat
 
 ## Features
 
-- Email/password authentication via Supabase Auth (`auth.users`)
-- Client-side sync of profiles into `public.users` after signup/signin
-- Streamed user list from Supabase (`public.users`)
-- Real-time messaging with read receipts
-- Typing indicators
-- Online/offline status (presence tracking)
-- Unread message tracking
-- User search functionality
-- Profile editing (username, bio, profile picture upload)
-- **Image and file attachments** - Send images from gallery or camera with automatic compression and validation
+### Core Features
+- **Email/password authentication** via Supabase Auth (`auth.users`)
+- **Client-side profile sync** into `public.users` after signup/signin
+- **Real-time messaging** with read receipts and message status
+- **Typing indicators** - See when others are typing
+- **Online/offline status** - Presence tracking with last seen timestamps
+- **Unread message tracking** - Badge counts for unread conversations
+- **User search** - Find users quickly by username
+
+### Profile & Customization
+- **Profile editing** - Update username, bio, and profile picture
+- **Image upload** - Compress and optimize profile pictures automatically
 - **Contact profiles** - View detailed contact information including avatar, bio, and online status
-- **Enhanced settings** - About & Support section with app version, feedback links, and more
-- **Chat Assist** - Send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there" (formerly AI Assistant)
+- **Theme support** - Light, dark, and system theme with persistence
+
+### Messaging Features
+- **Image and file attachments** - Send images from gallery or camera with automatic compression and validation
+- **Message previews** - See last message in chat list
+- **Real-time updates** - Messages appear instantly across devices
+
+### AI-Powered Features
+- **Chat Assist** - Send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there"
+  - Multi-provider AI support (OpenAI and Gemini) with automatic fallback
+  - Intelligent recipient matching
+  - Message history and confirmation dialogs
 
 ## Prerequisites
 
 Before you begin, ensure you have the following installed and configured:
 
-- **Flutter SDK** (>=3.0.0 recommended)
+- **Flutter SDK** (>=3.10.3 required, see `pubspec.yaml`)
   - Verify installation: `flutter --version`
   - Install: https://flutter.dev/docs/get-started/install
 - **Supabase Account** and project
@@ -60,12 +72,15 @@ Before you begin, ensure you have the following installed and configured:
 For experienced developers who want to get started quickly:
 
 1. **Set up Supabase:**
-   - Create a Supabase project and get your API keys
-   - Run the SQL setup scripts (see [Supabase Setup](#supabase-setup))
+   - Create a Supabase project at https://supabase.com
+   - Get your Project URL and anon key from Project Settings → API
+   - Run the SQL setup scripts in Supabase SQL Editor:
+     - `supabase_setup.sql` (required)
+     - `supabase_profile_migration.sql` (for profile features)
 
 2. **Configure the app:**
-   - Update `lib/main.dart` with your Supabase URL and anon key
-   - Or use `--dart-define` flags (see [App Configuration](#app-configuration))
+   - Update `lib/config/supabase_config.dart` with your Supabase URL and anon key
+   - Or use `--dart-define` flags (recommended, see [App Configuration](#app-configuration))
 
 3. **Install dependencies:**
    ```bash
@@ -78,7 +93,7 @@ For experienced developers who want to get started quickly:
    flutter run
    ```
 
-For detailed setup instructions, continue reading below.
+> **Note:** For first-time setup, see the detailed [Setup](#setup) section below. For AI features, see [AI Command Feature Setup](#5-ai-command-feature-setup-optional).
 
 ## Setup
 
@@ -116,7 +131,7 @@ For detailed setup instructions, continue reading below.
      - Authenticated write access for uploading
    - See your migration scripts or schema for exact column definitions
 
-5. **AI Command Feature Setup (Optional):**
+6. **AI Command Feature Setup (Optional):**
    
    The AI command feature supports multiple providers (OpenAI and Gemini) with automatic fallback.
    
@@ -165,18 +180,25 @@ USING (auth.uid() = id);
 
 ### App Configuration
 
-This app initializes Supabase in `lib/main.dart`. You have two options for configuration:
+This app initializes Supabase via `lib/config/supabase_config.dart`. You have two options for configuration:
 
 #### Option 1: Direct Configuration (Development)
 
-Update `lib/main.dart` directly with your Supabase credentials:
+Update `lib/config/supabase_config.dart` directly with your Supabase credentials by modifying the default values:
 
 ```dart
-Supabase.initialize(
-  url: 'https://YOUR_PROJECT.supabase.co',
-  anonKey: 'YOUR_ANON_KEY',
+static const String url = String.fromEnvironment(
+  'SUPABASE_URL',
+  defaultValue: 'https://YOUR_PROJECT.supabase.co',  // Update this
+);
+
+static const String anonKey = String.fromEnvironment(
+  'SUPABASE_ANON_KEY',
+  defaultValue: 'YOUR_ANON_KEY',  // Update this
 );
 ```
+
+> **Note:** This approach is only recommended for development. Never commit secrets to version control.
 
 #### Option 2: Environment Variables (Recommended for Production)
 
@@ -188,17 +210,7 @@ flutter run \
   --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
-To use this approach, adapt `main.dart` to read from environment:
-
-```dart
-const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-
-Supabase.initialize(
-  url: supabaseUrl,
-  anonKey: supabaseAnonKey,
-);
-```
+The `SupabaseConfig` class automatically reads from these environment variables. No code changes needed!
 
 > **Security Note:** Never commit secrets to version control. Use environment variables or `--dart-define` for production deployments.
 
@@ -431,9 +443,9 @@ On first launch:
 
 Key files and their purposes:
 
-- **Supabase initialization and session routing:**
-  - `lib/main.dart:8` - Supabase initialization
-  - `lib/main.dart:20` - Session routing logic
+- **App entry point and routing:**
+  - `lib/main.dart` - App initialization, theme management, and session routing
+  - `lib/config/supabase_config.dart` - Supabase configuration and initialization
 
 - **Authentication:**
   - `lib/screens/auth_screen.dart:21` - Sign up/sign in and metadata handling
@@ -458,17 +470,22 @@ Key files and their purposes:
   - `supabase/functions/extract-message-intent/` - Edge Function for AI intent extraction (supports OpenAI and Gemini with automatic fallback)
 
 - **File and image attachments:**
-  - `lib/services/file_upload_service.dart` - Image compression, resizing, and Supabase storage upload
-  - `lib/widgets/message_bubble.dart` - Display image attachments with preview
-  - `lib/widgets/message_input.dart` - Image picker (gallery and camera) integration
+  - `lib/services/file_upload_service.dart` - Image compression, resizing, validation, and Supabase storage upload
+  - `lib/widgets/message_bubble.dart` - Display image attachments with preview and loading states
+  - `lib/widgets/message_input.dart` - Image picker (gallery and camera) integration with attachment UI
 
 - **Contact profiles:**
-  - `lib/screens/contact_profile_screen.dart` - Contact details view with avatar, bio, and online status
+  - `lib/screens/contact_profile_screen.dart` - Contact details view with avatar, bio, online status, and last seen information
   - Navigate from chat screen header to view contact profile
+  - Displays user information in a clean, organized layout
 
 - **Real-time features:**
   - `lib/services/presence_service.dart` - Online/offline status tracking
   - `lib/services/typing_service.dart` - Typing indicators
+
+- **User experience:**
+  - `lib/services/haptic_service.dart` - Haptic feedback for user interactions
+  - `lib/services/theme_service.dart` - Theme preference persistence
 
 - **Configuration:**
   - `lib/config/supabase_config.dart` - Supabase configuration
@@ -522,10 +539,11 @@ Key files and their purposes:
   - On web, ensure you're using a modern browser (Chrome, Firefox, Edge)
 
 - **Image upload fails:**
-  - Check file size (max 5MB before compression)
+  - Check file size (max 5MB before compression, compressed to max 2000x2000px)
   - Verify image format (JPEG, PNG, WebP supported)
   - On mobile, ensure camera/storage permissions are granted
   - On web, no permissions needed (browser handles file access)
+  - Verify the `profile-pictures` storage bucket exists and has correct policies
 
 - **Image attachments not working:**
   - Verify the `message-attachments` storage bucket exists in Supabase Storage
@@ -545,22 +563,33 @@ Key files and their purposes:
   - Verify your API keys are valid and have quota remaining
   - See `DEPLOYMENT_GUIDE.md` and `supabase/functions/extract-message-intent/README.md` for detailed setup instructions
 
-- **UID shown in AppBar:**
-  - Update the title to `Text('Chats')` or fetch and display the current user's `username`
+- **General app issues:**
+  - If the app doesn't connect to Supabase, verify your credentials in `lib/config/supabase_config.dart`
+  - Ensure you've run all required SQL setup scripts
+  - Check Supabase dashboard for any service status issues
+  - Review app logs for detailed error messages
 
 ## Additional Resources
 
-- **Sample credentials:** `chat_app/my_users.txt` (for testing flows)
-- **Architecture documentation:** See `ARCHITECTURE.md` for detailed system design
-- **Chat Assist (AI command feature):** 
-  - Implementation details: `docs/AI_COMMAND_MESSAGING_PLAN.md`
-  - Implementation summary: `docs/AI_COMMAND_IMPLEMENTATION_SUMMARY.md`
-  - Deployment guide: `DEPLOYMENT_GUIDE.md`
-  - Edge Function README: `supabase/functions/extract-message-intent/README.md`
+### Documentation
+- **Architecture documentation:** See `ARCHITECTURE.md` for detailed system design, data flows, and component details
 - **Testing:** See `test/TESTING.md` for testing instructions and coverage information
 - **Feature suggestions:** See `docs/FEATURE_SUGGESTIONS.md` for potential enhancements
 - **Implementation history:** See `docs/IMPLEMENTATION_HISTORY.md` for development progress
-- **Security best practices:**
-  - Do not commit secrets to version control
-  - Use environment variables or `--dart-define` for API keys
-  - Enable RLS in production for better security
+
+### Chat Assist (AI Command Feature)
+- **Implementation details:** `docs/AI_COMMAND_MESSAGING_PLAN.md`
+- **Implementation summary:** `docs/AI_COMMAND_IMPLEMENTATION_SUMMARY.md`
+- **Security documentation:** `docs/AI_FEATURE_SECURITY.md`
+- **Deployment guide:** `DEPLOYMENT_GUIDE.md`
+- **Edge Function README:** `supabase/functions/extract-message-intent/README.md`
+
+### Development Resources
+- **Sample credentials:** `chat_app/my_users.txt` (for testing flows)
+- **Troubleshooting guide:** See `TROUBLESHOOTING.md` for common issues and solutions
+
+### Security Best Practices
+- **Never commit secrets** to version control
+- **Use environment variables** or `--dart-define` for API keys
+- **Enable RLS** in production for better security
+- **Review storage policies** to ensure proper access control

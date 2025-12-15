@@ -193,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(LucideIcons.messageCircle),
                   title: const Text('Feedback & Support'),
                   trailing: const Icon(LucideIcons.chevronRight),
-                  onTap: () => _launchUrl('mailto:support@example.com?subject=Chat App Feedback'),
+                  onTap: () => _launchUrl('mailto:support@example.com?subject=SmartChat Feedback'),
                 ),
                 const Divider(height: 1),
                 // Rate the App
