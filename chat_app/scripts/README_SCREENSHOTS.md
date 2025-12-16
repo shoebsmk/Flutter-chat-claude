@@ -89,3 +89,4 @@ Follow the sequence from `docs/showcase/SCREENSHOT_SEQUENCE.md`:
 
 If you prefer, you can also use Flutter's screenshot package in a simple Dart script, but the shell script approach is much simpler and more reliable.
 
+

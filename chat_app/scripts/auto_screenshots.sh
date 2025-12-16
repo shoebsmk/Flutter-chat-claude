@@ -126,3 +126,4 @@ echo ""
 echo "Screenshots saved to: $SCREENSHOT_DIR"
 ls -lh "$SCREENSHOT_DIR"/*.png 2>/dev/null | wc -l | xargs echo "Total screenshots:"
 
+

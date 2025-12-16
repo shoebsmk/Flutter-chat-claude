@@ -70,3 +70,4 @@ The app has 13 main feature categories to showcase:
 - Some features (typing indicators) work better as screen recordings
 - Estimated time: ~30-35 minutes for all screenshots
 
+
