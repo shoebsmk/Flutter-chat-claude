@@ -1,0 +1,56 @@
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase Hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "❌ ERROR: FIREBASE_TOKEN secret is not set!"
+            echo "Please set FIREBASE_TOKEN in GitHub Secrets."
+            echo "Get your token by running: firebase login:ci"
+            exit 1
+          fi
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "⚠️  Warning: SUPABASE_URL or SUPABASE_ANON_KEY not set."
+            echo "The build will use default values from config."
+          else
+            echo "✅ Environment variables set for Supabase configuration"
+          fi
+          # Firebase will automatically run build.sh via predeploy hook
+          # The environment variables above will be available to build.sh
+          firebase deploy --only hosting --token "$FIREBASE_TOKEN" --non-interactive
+

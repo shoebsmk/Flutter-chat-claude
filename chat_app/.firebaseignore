@@ -1,0 +1,91 @@
+# Firebase ignore file - excludes files from deployment
+
+# Development files
+*.md
+!README.md
+.git/
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+pubspec.lock
+analysis_options.yaml
+coverage/
+
+# Build artifacts (we only deploy build/web)
+build/
+!build/web/
+!build/web/**
+
+# Test files
+test/
+integration_test/
+
+# Documentation
+docs/
+ARCHITECTURE.md
+DEPLOYMENT_GUIDE.md
+DEPLOY_TO_VERCEL.md
+DEPLOY_TO_GITHUB_PAGES.md
+DEPLOY_TO_FIREBASE.md
+MARKETING_README.md
+
+# Scripts
+scripts/
+build.sh
+firebase.json
+.firebaseignore
+
+# Configuration files
+vercel.json
+.github/
+
+# Supabase
+supabase/
+supabase_setup.sql
+supabase_profile_migration.sql
+
+# Node modules
+node_modules/
+package-lock.json
+package.json
+
+# Screenshots
+screenshots/
+
+# Assets source (only built assets are deployed)
+assets/
+!build/web/assets/
+
+# Platform-specific files
+android/
+ios/
+linux/
+macos/
+windows/
+web/
+!build/web/
+
+# Other
+*.log
+*.class
+*.pyc
+migrate_working_dir/
+
