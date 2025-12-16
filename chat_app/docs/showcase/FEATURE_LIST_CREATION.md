@@ -10,7 +10,7 @@ Created a comprehensive, concise feature showcase list for the SmartChat Flutter
 
 ### 1. Codebase Analysis
 - **Examined project structure**: Reviewed `lib/` directory (screens, services, models, widgets)
-- **Read key documentation**: Analyzed `README.md`, `ARCHITECTURE.md`, and feature suggestion docs
+- **Read key documentation**: Analyzed `README.md`, `docs/architecture/ARCHITECTURE.md`, and feature suggestion docs
 - **Reviewed implementation files**: Checked actual code to understand feature capabilities
 
 ### 2. Feature Identification

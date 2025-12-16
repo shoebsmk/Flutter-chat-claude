@@ -100,7 +100,7 @@ For experienced developers who want to get started quickly:
 
 Ready to deploy your Flutter web app? Follow the quick start guide:
 
-👉 **[DEPLOY_TO_GITHUB_PAGES.md](DEPLOY_TO_GITHUB_PAGES.md)** - Step-by-step deployment instructions
+👉 **[Deployment Guide](docs/deployment/DEPLOY_TO_GITHUB_PAGES.md)** - Step-by-step deployment instructions
 
 **Quick Summary:**
 1. Get your Supabase URL and anon key
@@ -589,20 +589,25 @@ Key files and their purposes:
 ## Additional Resources
 
 ### Documentation
-- **Architecture documentation:** See `ARCHITECTURE.md` for detailed system design, data flows, and component details
+
+All documentation is organized in the [`docs/`](docs/) directory:
+
+- **📚 [Documentation Index](docs/README.md)** - Complete documentation overview
+- **🏗️ [Architecture](docs/architecture/ARCHITECTURE.md)** - Detailed system design, data flows, and component details
+- **🚀 [Deployment Guides](docs/deployment/)** - Deployment guides for Firebase, GitHub Pages, Vercel
+- **🗄️ [Database Scripts](docs/database/)** - SQL scripts and database management
+- **📸 [Showcase](docs/showcase/)** - Screenshots and feature documentation
+- **📢 [Marketing](docs/marketing/)** - Marketing and promotional content
+
+### Testing
 - **Testing:** See `test/TESTING.md` for testing instructions and coverage information
-- **Feature suggestions:** See `docs/FEATURE_SUGGESTIONS.md` for potential enhancements
-- **Implementation history:** See `docs/IMPLEMENTATION_HISTORY.md` for development progress
+- **Integration Tests:** See `integration_test/README.md` for integration test documentation
 
 ### Chat Assist (AI Command Feature)
-- **Implementation details:** `docs/AI_COMMAND_MESSAGING_PLAN.md`
-- **Implementation summary:** `docs/AI_COMMAND_IMPLEMENTATION_SUMMARY.md`
-- **Security documentation:** `docs/AI_FEATURE_SECURITY.md`
-- **Deployment guide:** `DEPLOYMENT_GUIDE.md`
+- **Implementation details:** [`docs/architecture/AI_COMMAND_MESSAGING_PLAN.md`](docs/architecture/AI_COMMAND_MESSAGING_PLAN.md)
+- **Implementation summary:** [`docs/architecture/AI_COMMAND_IMPLEMENTATION_SUMMARY.md`](docs/architecture/AI_COMMAND_IMPLEMENTATION_SUMMARY.md)
+- **Security documentation:** [`docs/architecture/AI_FEATURE_SECURITY.md`](docs/architecture/AI_FEATURE_SECURITY.md)
 - **Edge Function README:** `supabase/functions/extract-message-intent/README.md`
-
-### Web Deployment
-- **GitHub Pages deployment:** See `DEPLOY_TO_GITHUB_PAGES.md` for complete guide on deploying the Flutter web app to GitHub Pages
 
 ### Development Resources
 - **Sample credentials:** `chat_app/my_users.txt` (for testing flows)

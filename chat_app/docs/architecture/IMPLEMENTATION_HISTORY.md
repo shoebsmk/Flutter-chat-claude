@@ -548,6 +548,6 @@ See `FEATURE_SUGGESTIONS.md` for complete list and prioritization.
 **Maintained By:** Development Team  
 **Related Documents:**
 - `FEATURE_SUGGESTIONS.md` - Feature backlog and prioritization
-- `ARCHITECTURE.md` - System architecture documentation
+- `docs/architecture/ARCHITECTURE.md` - System architecture documentation
 - `README.md` - Project setup and usage guide
 
