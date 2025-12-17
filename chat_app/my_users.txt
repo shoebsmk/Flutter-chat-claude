@@ -9,6 +9,7 @@ user5: email: dohysosy@denipl.net | password: Testuser5 | username: dohysosy (ve
 user6: email: lozygu@denipl.net | password: Testuser6 | username: lozygu
 user7: email: gufubo@denipl.com | password: Testuser7 | username: gufubo
 user8: email: webohuju@denipl.com | password: Testuser8 | username: webohuju
+user8: email: gapygyfo@denipl.com | password: Testuser7 | username: gapygyfo
 
 For running the app:
 flutter run --dart-define=SUPABASE_URL=https://djpzzwjxjlslnkgstgfk.supabase.co --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqcHp6d2p4amxzbG5rZ3N0Z2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNTI5ODYsImV4cCI6MjA4MDgyODk4Nn0.wQsV7inD7QjuAh-tgHUV6Z7jJUQ1PXPiQ4_ott_3raY

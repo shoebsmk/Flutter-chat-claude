@@ -27,6 +27,8 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
+  bool _showVerificationMessage = false;
+  String? _verificationEmail;
 
   @override
   void dispose() {
@@ -76,34 +78,60 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _showVerificationMessage = false;
+      _verificationEmail = null;
     });
 
     try {
       if (_isSignUp) {
-        await _authService.signUp(
+        final result = await _authService.signUp(
           email: _emailController.text,
           password: _passwordController.text,
           username: _usernameController.text,
         );
+
+        if (mounted) {
+          if (result.requiresEmailVerification) {
+            // Email verification required - show message and stay on screen
+            setState(() {
+              _isLoading = false;
+              _showVerificationMessage = true;
+              _verificationEmail = result.email;
+              _errorMessage = null;
+            });
+            // Clear form fields for better UX
+            _emailController.clear();
+            _passwordController.clear();
+            _usernameController.clear();
+          } else {
+            // No email verification required - proceed with navigation
+            HapticService.instance.selectionClick();
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const ChatListScreen()),
+            );
+          }
+        }
       } else {
         await _authService.signIn(
           email: _emailController.text,
           password: _passwordController.text,
         );
-      }
 
-      if (mounted) {
-        // Success haptic feedback
-        HapticService.instance.selectionClick();
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ChatListScreen()),
-        );
+        if (mounted) {
+          // Success haptic feedback
+          HapticService.instance.selectionClick();
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
           _errorMessage = ExceptionHandler.getMessage(e);
+          _showVerificationMessage = false;
+          _verificationEmail = null;
         });
       }
     }
@@ -113,6 +141,8 @@ class _AuthScreenState extends State<AuthScreen> {
     setState(() {
       _isSignUp = !_isSignUp;
       _errorMessage = null;
+      _showVerificationMessage = false;
+      _verificationEmail = null;
       _formKey.currentState?.reset();
     });
   }
@@ -138,6 +168,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 _buildSubtitle(theme),
                 const SizedBox(height: AppTheme.spacingXXL),
                 if (_errorMessage != null) _buildErrorMessage(),
+                if (_showVerificationMessage) _buildEmailVerificationMessage(),
                 _buildEmailField(),
                 const SizedBox(height: AppTheme.spacingM),
                 _buildPasswordField(),
@@ -210,6 +241,69 @@ class _AuthScreenState extends State<AuthScreen> {
         ],
       ),
     ).animate().fadeIn().shake();
+  }
+
+  Widget _buildEmailVerificationMessage() {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingM),
+      margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
+      decoration: BoxDecoration(
+        color: AppTheme.successLight.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppTheme.radiusM),
+        border: Border.all(color: AppTheme.successLight.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(LucideIcons.mail, color: AppTheme.successLight, size: 20),
+              const SizedBox(width: AppTheme.spacingS),
+              Expanded(
+                child: Text(
+                  'Please check your email',
+                  style: AppTheme.bodyMedium.copyWith(
+                    color: AppTheme.successLight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingS),
+          Text(
+            'We sent a verification link to',
+            style: AppTheme.bodySmall.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingXS),
+          Text(
+            _verificationEmail ?? '',
+            style: AppTheme.bodySmall.copyWith(
+              color: AppTheme.successLight,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingXS),
+          Text(
+            'Please check your inbox and click the link to verify your account.',
+            style: AppTheme.bodySmall.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingXS),
+          Text(
+            'Didn\'t receive the email? Check your spam folder.',
+            style: AppTheme.bodySmall.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn().slideY(begin: -0.1, end: 0);
   }
 
   Widget _buildEmailField() {

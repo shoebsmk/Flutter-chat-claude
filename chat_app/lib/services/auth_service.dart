@@ -3,6 +3,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../exceptions/app_exceptions.dart' as exceptions;
 import '../models/user.dart' as models;
 
+/// Result of a sign-up operation.
+class SignUpResult {
+  /// The created user model, or null if email verification is required.
+  final models.User? user;
+  
+  /// Whether email verification is required before the user can sign in.
+  final bool requiresEmailVerification;
+  
+  /// The email address used for sign-up.
+  final String email;
+  
+  SignUpResult({
+    this.user,
+    required this.requiresEmailVerification,
+    required this.email,
+  });
+}
+
 /// Service for handling authentication operations.
 class AuthService {
   final SupabaseClient _client;
@@ -22,16 +40,17 @@ class AuthService {
   /// Signs up a new user with email and password.
   ///
   /// Creates both an auth user and a corresponding entry in the users table.
-  /// Returns the created user model.
+  /// Returns a [SignUpResult] that indicates whether email verification is required.
   /// Throws [exceptions.AuthException] if sign up fails.
-  Future<models.User?> signUp({
+  Future<SignUpResult> signUp({
     required String email,
     required String password,
     required String username,
   }) async {
     try {
+      final trimmedEmail = email.trim();
       final response = await _client.auth.signUp(
-        email: email.trim(),
+        email: trimmedEmail,
         password: password,
         data: {'username': username.trim()},
       );
@@ -41,16 +60,43 @@ class AuthService {
         throw exceptions.AuthException('Sign up failed. Please try again.');
       }
 
-      // Create user in public.users table
-      await _client.from('users').insert({
-        'id': userId,
-        'username': username.trim(),
-      });
+      // Check if email verification is required (session is null when verification is needed)
+      final requiresEmailVerification = response.session == null;
 
-      return models.User(
-        id: userId,
-        username: username.trim(),
-        email: email.trim(),
+      // Create user in public.users table
+      // This should work even without a session since we have the userId
+      try {
+        await _client.from('users').insert({
+          'id': userId,
+          'username': username.trim(),
+        });
+      } on PostgrestException catch (e) {
+        // Critical error: auth user created but database insert failed
+        debugPrint('Critical error: Database insert failed after auth user creation. UserId: $userId, Error: ${e.message}');
+        throw exceptions.DatabaseException(
+          'Account created but profile setup failed. Please contact support.',
+          e,
+        );
+      }
+
+      // If email verification is required, return result without user (user not authenticated)
+      if (requiresEmailVerification) {
+        return SignUpResult(
+          user: null,
+          requiresEmailVerification: true,
+          email: trimmedEmail,
+        );
+      }
+
+      // User is authenticated (no email verification required)
+      return SignUpResult(
+        user: models.User(
+          id: userId,
+          username: username.trim(),
+          email: trimmedEmail,
+        ),
+        requiresEmailVerification: false,
+        email: trimmedEmail,
       );
     } on AuthApiException catch (e) {
       debugPrint('Auth API error during sign up: ${e.message}');
