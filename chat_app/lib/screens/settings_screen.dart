@@ -155,7 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // App Version
                 ListTile(
                   leading: const Icon(LucideIcons.info),
-                  title: const Text('App Version'),
+                  title: const Text('App Version(Dev)'),
                   subtitle: _isLoadingVersion
                       ? const Text('Loading...')
                       : Text(_packageInfo != null

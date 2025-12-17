@@ -52,5 +52,5 @@ jobs:
           fi
           # Firebase will automatically run build.sh via predeploy hook
           # The environment variables above will be available to build.sh
-          firebase deploy --only hosting --token "$FIREBASE_TOKEN" --non-interactive
+          firebase deploy --only hosting --token "$FIREBASE_TOKEN" --project smart-chat-78868 --non-interactive
 

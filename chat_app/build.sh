@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting Flutter web build for Vercel..."
+echo "🚀 Starting Flutter web build..."
 
 # Check if Flutter is installed
 if ! command -v flutter &> /dev/null; then
