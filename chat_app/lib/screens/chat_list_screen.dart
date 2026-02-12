@@ -294,7 +294,7 @@ class _ChatListScreenState extends State<ChatListScreen>
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Search conversations...',
+          hintText: 'Search',
           prefixIcon: const Icon(LucideIcons.search),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
