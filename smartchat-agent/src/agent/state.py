@@ -13,6 +13,8 @@ class AgentState(MessagesState):
 
     Additional fields:
     - user_id: The authenticated user's Supabase UUID (passed from Flutter)
+    - confirm_only: When True, agent extracts intent but does NOT send messages
     """
 
     user_id: str
+    confirm_only: bool = False

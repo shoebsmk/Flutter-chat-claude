@@ -48,14 +48,28 @@ def _get_model():
 # --- Node functions ---
 
 
+CONFIRM_ONLY_INSTRUCTION = """
+
+IMPORTANT: This is a PREVIEW request. Do NOT use the send_message tool.
+Instead, use find_contacts to look up any recipients mentioned by the user.
+Then respond with ONLY a JSON block in this exact format (no other text):
+{"action": "send_message", "recipients": [{"name": "actual_username", "id": "user_uuid"}], "message": "the message to send"}
+
+If you cannot find a recipient, still include them with "id": null.
+If the user's command is not about sending a message (e.g. finding contacts, recent chats), proceed normally."""
+
+
 def agent_node(state: AgentState) -> dict:
     """The main agent node - decides what to do based on the conversation."""
     model = _get_model()
 
+    # Build system prompt — append confirm_only instruction when in preview mode
+    confirm_instruction = CONFIRM_ONLY_INSTRUCTION if state.get("confirm_only", False) else ""
+
     # Inject user_id context into the system message
     system_message = {
         "role": "system",
-        "content": f"{SYSTEM_PROMPT}\n\nCurrent user's ID (sender_id): {state['user_id']}",
+        "content": f"{SYSTEM_PROMPT}{confirm_instruction}\n\nCurrent user's ID (sender_id): {state['user_id']}",
     }
 
     # Call the LLM with tools

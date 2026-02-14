@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:math';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/ai_command_service.dart';
 import '../services/user_service.dart';
@@ -37,6 +40,15 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   // Agent mode: when true, commands go to LangGraph agent
   bool _useAgent = true;
   String? _threadId;
+
+  // Connectivity
+  bool _isOffline = false;
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+
+  // Typing indicator for cold start UX
+  bool _showTypingIndicator = false;
+  Timer? _coldStartTimer;
+  String? _coldStartHint;
   User? _suggestionContact;
   final String _suggestionMessage = "I'll be late";
   
@@ -48,6 +60,14 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   void initState() {
     super.initState();
     _loadUsers();
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen((results) {
+      if (mounted) {
+        setState(() {
+          _isOffline = results.contains(ConnectivityResult.none);
+        });
+      }
+    });
   }
 
   void _addMessage({
@@ -134,34 +154,107 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   }
 
   /// New path: sends command to the LangGraph agent.
-  /// The agent handles intent extraction, recipient resolution, and sending.
+  /// Two-step flow: first preview (confirm_only), then execute after user confirms.
   Future<void> _processWithAgent(String command) async {
+    setState(() => _showTypingIndicator = true);
+    _scrollToBottom();
+
+    // Show cold start hint after 8 seconds of waiting
+    _coldStartTimer = Timer(const Duration(seconds: 8), () {
+      if (mounted && _showTypingIndicator) {
+        setState(() => _coldStartHint = 'This may take a moment...');
+      }
+    });
+
     try {
       final userId = AuthService().currentUserId ?? '';
-      final result = await _aiCommandService.sendToAgent(
+
+      // Step 1: Preview — ask agent to extract intent without sending
+      final preview = await _aiCommandService.sendToAgent(
         command,
         userId,
         threadId: _threadId,
+        confirmOnly: true,
       );
 
-      // Persist thread for follow-up messages
-      if (result['thread_id']?.toString().isNotEmpty == true) {
-        _threadId = result['thread_id'] as String;
+      // Persist thread for the execute step
+      if (preview['thread_id']?.toString().isNotEmpty == true) {
+        _threadId = preview['thread_id'] as String;
       }
 
-      final agentResponse = result['response']?.toString() ?? '';
-      final toolResults = result['tool_results'] as List<dynamic>? ?? [];
+      _coldStartTimer?.cancel();
+      setState(() {
+        _showTypingIndicator = false;
+        _coldStartHint = null;
+      });
 
-      if (mounted) {
-        // Determine success based on whether tools executed
-        final hasToolResults = toolResults.isNotEmpty;
-        _addMessage(
-          content: agentResponse.isNotEmpty
-              ? agentResponse
-              : 'Done!',
-          isUser: false,
-          isSuccess: hasToolResults ? true : null,
+      final pendingAction = preview['pending_action'] as Map<String, dynamic>?;
+
+      if (pendingAction != null && pendingAction['action'] == 'send_message') {
+        // Extract recipients and message for confirmation
+        final recipients = (pendingAction['recipients'] as List<dynamic>?)
+                ?.map((r) => (r as Map<String, dynamic>)['name']?.toString() ?? '')
+                .where((n) => n.isNotEmpty)
+                .toList() ??
+            [];
+        final message = pendingAction['message']?.toString() ?? '';
+
+        if (recipients.isEmpty) {
+          _addMessage(
+            content: 'Could not identify recipients. Please try again.',
+            isUser: false,
+            isSuccess: false,
+          );
+          return;
+        }
+
+        // Show confirmation dialog
+        final confirmed = await _showAgentConfirmationDialog(
+          recipients: recipients,
+          message: message,
         );
+
+        if (confirmed == true && mounted) {
+          // Step 2: Execute — tell agent to send
+          setState(() => _showTypingIndicator = true);
+          _scrollToBottom();
+
+          final result = await _aiCommandService.sendToAgent(
+            'Yes, send the message as planned.',
+            userId,
+            threadId: _threadId,
+            execute: true,
+          );
+
+          setState(() => _showTypingIndicator = false);
+
+          final agentResponse = result['response']?.toString() ?? '';
+          final toolResults = result['tool_results'] as List<dynamic>? ?? [];
+
+          if (mounted) {
+            _addMessage(
+              content: agentResponse.isNotEmpty ? agentResponse : 'Done!',
+              isUser: false,
+              isSuccess: toolResults.isNotEmpty ? true : null,
+            );
+          }
+        } else if (mounted) {
+          _addMessage(
+            content: 'Message cancelled.',
+            isUser: false,
+            isSuccess: false,
+          );
+        }
+      } else {
+        // No send action (e.g. contact lookup, recent chats, general chat)
+        final agentResponse = preview['response']?.toString() ?? '';
+        if (mounted) {
+          _addMessage(
+            content: agentResponse.isNotEmpty ? agentResponse : 'Done!',
+            isUser: false,
+            isSuccess: null,
+          );
+        }
       }
     } on AICommandException catch (e) {
       if (mounted) {
@@ -189,10 +282,60 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         );
       }
     } finally {
+      _coldStartTimer?.cancel();
       if (mounted) {
-        setState(() => _isProcessing = false);
+        setState(() {
+          _isProcessing = false;
+          _showTypingIndicator = false;
+          _coldStartHint = null;
+        });
       }
     }
+  }
+
+  /// Confirmation dialog for the agent path.
+  /// Shows recipients (supports multiple) and message preview.
+  Future<bool?> _showAgentConfirmationDialog({
+    required List<String> recipients,
+    required String message,
+  }) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Send'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('To: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text(
+                    recipients.join(', '),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.spacingM),
+            const Text('Message:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: AppTheme.spacingS),
+            Text(message),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Old path: uses Supabase Edge Function for intent extraction
@@ -428,16 +571,45 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // Offline banner
+                if (_isOffline)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingM,
+                      vertical: AppTheme.spacingS,
+                    ),
+                    color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                    child: Row(
+                      children: [
+                        Icon(
+                          LucideIcons.wifiOff,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(width: AppTheme.spacingS),
+                        Text(
+                          'No internet connection',
+                          style: AppTheme.bodySmall.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 // Content area - Welcome or Chat
                 Expanded(
-                  child: _hasMessages
+                  child: (_hasMessages || _showTypingIndicator)
                       ? ListView.builder(
                           controller: _scrollController,
                           padding: const EdgeInsets.symmetric(
                             vertical: AppTheme.spacingM,
                           ),
-                          itemCount: _messages.length,
+                          itemCount: _messages.length + (_showTypingIndicator ? 1 : 0),
                           itemBuilder: (context, index) {
+                            if (index == _messages.length && _showTypingIndicator) {
+                              return _buildTypingIndicator(theme);
+                            }
                             return _buildMessageBubble(_messages[index], theme);
                           },
                         )
@@ -562,7 +734,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                         Expanded(
                           child: TextField(
                             controller: _commandController,
-                            enabled: !_isProcessing,
+                            enabled: !_isProcessing && !_isOffline,
                             decoration: InputDecoration(
                               hintText: 'Type your command...',
                               hintStyle: AppTheme.bodyMedium.copyWith(
@@ -615,7 +787,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
-                                  onTap: _isProcessing ? null : _processCommand,
+                                  onTap: (_isProcessing || _isOffline) ? null : _processCommand,
                                   borderRadius: BorderRadius.circular(24),
                                   child: Center(
                                     child: _isProcessing
@@ -669,6 +841,100 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildTypingIndicator(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    final messageColor = isDark
+        ? AppTheme.messageReceivedDark
+        : AppTheme.messageReceivedLight;
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: AppTheme.spacingS,
+        right: AppTheme.spacingL,
+        top: AppTheme.spacingXS,
+        bottom: AppTheme.spacingXS,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: AppTheme.spacingS),
+            child: Icon(
+              LucideIcons.sparkles,
+              size: 20,
+              color: theme.colorScheme.primary.withOpacity(0.7),
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.spacingM,
+                  vertical: AppTheme.spacingS + 4,
+                ),
+                decoration: BoxDecoration(
+                  color: messageColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(AppTheme.radiusM),
+                    topRight: Radius.circular(AppTheme.radiusM),
+                    bottomLeft: Radius.circular(AppTheme.radiusXS),
+                    bottomRight: Radius.circular(AppTheme.radiusM),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildBouncingDot(0, theme),
+                    const SizedBox(width: 4),
+                    _buildBouncingDot(1, theme),
+                    const SizedBox(width: 4),
+                    _buildBouncingDot(2, theme),
+                  ],
+                ),
+              ),
+              if (_coldStartHint != null)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: AppTheme.spacingXS,
+                    left: AppTheme.spacingXS,
+                  ),
+                  child: Text(
+                    _coldStartHint!,
+                    style: AppTheme.bodySmall.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      fontSize: 11,
+                    ),
+                  )
+                      .animate()
+                      .fadeIn(duration: 400.ms),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBouncingDot(int index, ThemeData theme) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withOpacity(0.4),
+        shape: BoxShape.circle,
+      ),
+    )
+        .animate(onPlay: (controller) => controller.repeat())
+        .fadeIn(
+          delay: Duration(milliseconds: index * 200),
+          duration: 400.ms,
+        )
+        .then()
+        .fadeOut(duration: 400.ms);
   }
 
   Widget _buildMessageBubble(Map<String, dynamic> message, ThemeData theme) {
@@ -810,6 +1076,8 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
 
   @override
   void dispose() {
+    _coldStartTimer?.cancel();
+    _connectivitySubscription.cancel();
     _commandController.dispose();
     _scrollController.dispose();
     super.dispose();

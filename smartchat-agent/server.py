@@ -6,6 +6,7 @@ Deployed to Google Cloud Run (free tier).
 
 import json
 import os
+import re
 import uuid
 
 from dotenv import load_dotenv
@@ -40,6 +41,8 @@ class AgentRequest(BaseModel):
     message: str
     user_id: str
     thread_id: str | None = None
+    confirm_only: bool = False  # Preview mode: extract intent without sending
+    execute: bool = False  # Execute after user confirmation
 
 
 class AgentResponse(BaseModel):
@@ -48,6 +51,7 @@ class AgentResponse(BaseModel):
     response: str
     thread_id: str
     tool_results: list[dict] | None = None
+    pending_action: dict | None = None  # What the agent wants to do (for confirmation)
 
 
 @app.get("/health")
@@ -62,14 +66,20 @@ async def run_agent(req: AgentRequest):
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
     thread_id = req.thread_id or str(uuid.uuid4())
-
     config = {"configurable": {"thread_id": thread_id}}
 
     try:
+        # Determine the message to send
+        actual_message = req.message
+        if req.execute and req.thread_id:
+            # User confirmed — tell agent to proceed with the same thread context
+            actual_message = "Yes, send the message as planned."
+
         result = agent.invoke(
             {
-                "messages": [HumanMessage(content=req.message)],
+                "messages": [HumanMessage(content=actual_message)],
                 "user_id": req.user_id,
+                "confirm_only": req.confirm_only,
             },
             config=config,
         )
@@ -87,14 +97,36 @@ async def run_agent(req: AgentRequest):
                 except (json.JSONDecodeError, TypeError):
                     tool_results.append({"raw": str(msg.content)})
 
+        # In confirm_only mode, try to extract the pending action from AI response
+        pending_action = None
+        if req.confirm_only:
+            pending_action = _extract_pending_action(ai_response)
+
         return AgentResponse(
-            response=ai_response,
+            response=ai_response if not pending_action else "Ready to send.",
             thread_id=thread_id,
             tool_results=tool_results if tool_results else None,
+            pending_action=pending_action,
         )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _extract_pending_action(ai_response: str) -> dict | None:
+    """Parse a JSON action block from the AI's confirm_only response."""
+    try:
+        # Try to find a JSON object with "action" key
+        json_match = re.search(
+            r'\{[^{}]*"action"[^{}]*\}', ai_response, re.DOTALL
+        )
+        if json_match:
+            parsed = json.loads(json_match.group())
+            if parsed.get("action") == "send_message":
+                return parsed
+    except (json.JSONDecodeError, AttributeError):
+        pass
+    return None
 
 
 if __name__ == "__main__":

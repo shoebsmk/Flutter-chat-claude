@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -161,6 +162,9 @@ class AICommandService {
   /// The agent handles everything server-side: intent extraction,
   /// recipient resolution, and message sending.
   ///
+  /// Includes automatic retry with exponential backoff for transient errors
+  /// (timeouts, network issues, 5xx). Max 2 retries (3 total attempts).
+  ///
   /// Returns a map with 'response', 'thread_id', and 'tool_results'.
   ///
   /// Throws [AICommandException] if the agent returns an error.
@@ -169,6 +173,8 @@ class AICommandService {
     String command,
     String userId, {
     String? threadId,
+    bool confirmOnly = false,
+    bool execute = false,
   }) async {
     if (command.trim().isEmpty) {
       throw AICommandException('Command cannot be empty');
@@ -178,6 +184,46 @@ class AICommandService {
       throw AICommandException('Command is too long (max 500 characters)');
     }
 
+    await _checkConnectivity();
+
+    const maxRetries = 2;
+    const baseDelay = Duration(seconds: 2);
+
+    for (var attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await _executeAgentRequest(
+          command,
+          userId,
+          threadId: threadId,
+          confirmOnly: confirmOnly,
+          execute: execute,
+        );
+      } catch (e) {
+        final isLastAttempt = attempt == maxRetries;
+
+        if (isLastAttempt || !_isRetryableError(e)) {
+          rethrow;
+        }
+
+        // Exponential backoff: 2s, 4s
+        final delay = baseDelay * (1 << attempt);
+        debugPrint('Agent request failed (attempt ${attempt + 1}), retrying in ${delay.inSeconds}s...');
+        await Future.delayed(delay);
+      }
+    }
+
+    // Unreachable, but Dart requires it
+    throw AICommandException('Failed to reach agent after retries.');
+  }
+
+  /// Executes a single HTTP request to the agent.
+  Future<Map<String, dynamic>> _executeAgentRequest(
+    String command,
+    String userId, {
+    String? threadId,
+    bool confirmOnly = false,
+    bool execute = false,
+  }) async {
     try {
       final body = <String, dynamic>{
         'message': command.trim(),
@@ -186,6 +232,12 @@ class AICommandService {
       if (threadId != null) {
         body['thread_id'] = threadId;
       }
+      if (confirmOnly) {
+        body['confirm_only'] = true;
+      }
+      if (execute) {
+        body['execute'] = true;
+      }
 
       final response = await http
           .post(
@@ -193,7 +245,7 @@ class AICommandService {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -201,11 +253,14 @@ class AICommandService {
           'response': data['response']?.toString() ?? '',
           'thread_id': data['thread_id']?.toString() ?? '',
           'tool_results': data['tool_results'] ?? [],
+          'pending_action': data['pending_action'],
         };
       } else if (response.statusCode == 429) {
         throw AICommandException(
           'Service is temporarily unavailable. Please try again in a moment.',
         );
+      } else if (response.statusCode >= 500) {
+        throw NetworkException.serverError();
       } else {
         final errorBody = _tryDecodeError(response.body);
         throw AICommandException(
@@ -222,19 +277,44 @@ class AICommandService {
 
       if (errorString.contains('timeout') ||
           errorString.contains('timed out')) {
-        throw NetworkException(
-          'Request timed out. The agent may be starting up — please try again.',
-        );
+        throw NetworkException.timeout();
       }
 
       if (errorString.contains('network') ||
           errorString.contains('connection') ||
           errorString.contains('socket')) {
-        throw NetworkException('Network error. Please check your connection.');
+        throw NetworkException.noConnection();
       }
 
       throw AICommandException('Failed to reach agent. Please try again.');
     }
+  }
+
+  /// Checks device connectivity before making network requests.
+  /// Throws [NetworkException.noConnection] if offline.
+  Future<void> _checkConnectivity() async {
+    try {
+      final result = await Connectivity().checkConnectivity();
+      if (result.contains(ConnectivityResult.none)) {
+        throw NetworkException.noConnection();
+      }
+    } on NetworkException {
+      rethrow;
+    } catch (e) {
+      // If connectivity check itself fails, proceed anyway
+      // and let the HTTP call fail naturally if truly offline
+      debugPrint('Connectivity check failed: $e');
+    }
+  }
+
+  /// Returns true if the error is transient and worth retrying.
+  bool _isRetryableError(Object e) {
+    if (e is NetworkException) return true;
+    final s = e.toString().toLowerCase();
+    return s.contains('timeout') ||
+        s.contains('socket') ||
+        s.contains('connection') ||
+        s.contains('network');
   }
 
   /// Tries to extract an error message from a JSON response body.
