@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/agent_config.dart';
 import '../exceptions/app_exceptions.dart';
 import '../models/user.dart' as models;
 
@@ -151,6 +154,98 @@ class AICommandService {
     // Multiple matches - return first match for now
     // Future enhancement: show selection dialog
     return matches.first;
+  }
+
+  /// Sends a command to the LangGraph agent backend.
+  ///
+  /// The agent handles everything server-side: intent extraction,
+  /// recipient resolution, and message sending.
+  ///
+  /// Returns a map with 'response', 'thread_id', and 'tool_results'.
+  ///
+  /// Throws [AICommandException] if the agent returns an error.
+  /// Throws [NetworkException] if there is a connectivity issue.
+  Future<Map<String, dynamic>> sendToAgent(
+    String command,
+    String userId, {
+    String? threadId,
+  }) async {
+    if (command.trim().isEmpty) {
+      throw AICommandException('Command cannot be empty');
+    }
+
+    if (command.length > 500) {
+      throw AICommandException('Command is too long (max 500 characters)');
+    }
+
+    try {
+      final body = <String, dynamic>{
+        'message': command.trim(),
+        'user_id': userId,
+      };
+      if (threadId != null) {
+        body['thread_id'] = threadId;
+      }
+
+      final response = await http
+          .post(
+            Uri.parse(AgentConfig.agentEndpoint),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {
+          'response': data['response']?.toString() ?? '',
+          'thread_id': data['thread_id']?.toString() ?? '',
+          'tool_results': data['tool_results'] ?? [],
+        };
+      } else if (response.statusCode == 429) {
+        throw AICommandException(
+          'Service is temporarily unavailable. Please try again in a moment.',
+        );
+      } else {
+        final errorBody = _tryDecodeError(response.body);
+        throw AICommandException(
+          errorBody ?? 'Agent returned status ${response.statusCode}',
+        );
+      }
+    } on AICommandException {
+      rethrow;
+    } on NetworkException {
+      rethrow;
+    } catch (e) {
+      debugPrint('Error calling agent: $e');
+      final errorString = e.toString().toLowerCase();
+
+      if (errorString.contains('timeout') ||
+          errorString.contains('timed out')) {
+        throw NetworkException(
+          'Request timed out. The agent may be starting up — please try again.',
+        );
+      }
+
+      if (errorString.contains('network') ||
+          errorString.contains('connection') ||
+          errorString.contains('socket')) {
+        throw NetworkException('Network error. Please check your connection.');
+      }
+
+      throw AICommandException('Failed to reach agent. Please try again.');
+    }
+  }
+
+  /// Tries to extract an error message from a JSON response body.
+  String? _tryDecodeError(String body) {
+    try {
+      final data = jsonDecode(body);
+      if (data is Map<String, dynamic>) {
+        return data['detail']?.toString() ?? data['error']?.toString();
+      }
+    } catch (_) {}
+    return null;
   }
 }
 

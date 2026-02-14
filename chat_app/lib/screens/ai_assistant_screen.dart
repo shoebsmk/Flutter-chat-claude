@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../services/ai_command_service.dart';
 import '../services/user_service.dart';
 import '../services/chat_service.dart';
+import '../services/auth_service.dart';
 import '../models/user.dart' as models;
 import '../exceptions/app_exceptions.dart';
 import '../theme/app_theme.dart';
@@ -32,6 +33,10 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   List<User> _allUsers = [];
   bool _isLoadingUsers = true;
   bool _showSuggestionButton = true;
+
+  // Agent mode: when true, commands go to LangGraph agent
+  bool _useAgent = true;
+  String? _threadId;
   User? _suggestionContact;
   final String _suggestionMessage = "I'll be late";
   
@@ -121,6 +126,78 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     setState(() => _isProcessing = true);
     _commandController.clear();
 
+    if (_useAgent) {
+      await _processWithAgent(command);
+    } else {
+      await _processWithEdgeFunction(command);
+    }
+  }
+
+  /// New path: sends command to the LangGraph agent.
+  /// The agent handles intent extraction, recipient resolution, and sending.
+  Future<void> _processWithAgent(String command) async {
+    try {
+      final userId = AuthService().currentUserId ?? '';
+      final result = await _aiCommandService.sendToAgent(
+        command,
+        userId,
+        threadId: _threadId,
+      );
+
+      // Persist thread for follow-up messages
+      if (result['thread_id']?.toString().isNotEmpty == true) {
+        _threadId = result['thread_id'] as String;
+      }
+
+      final agentResponse = result['response']?.toString() ?? '';
+      final toolResults = result['tool_results'] as List<dynamic>? ?? [];
+
+      if (mounted) {
+        // Determine success based on whether tools executed
+        final hasToolResults = toolResults.isNotEmpty;
+        _addMessage(
+          content: agentResponse.isNotEmpty
+              ? agentResponse
+              : 'Done!',
+          isUser: false,
+          isSuccess: hasToolResults ? true : null,
+        );
+      }
+    } on AICommandException catch (e) {
+      if (mounted) {
+        _addMessage(
+          content: e.message,
+          isUser: false,
+          isSuccess: false,
+        );
+      }
+    } on NetworkException catch (e) {
+      if (mounted) {
+        _addMessage(
+          content: e.message,
+          isUser: false,
+          isSuccess: false,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error processing agent command: $e');
+      if (mounted) {
+        _addMessage(
+          content: 'An unexpected error occurred. Please try again.',
+          isUser: false,
+          isSuccess: false,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  /// Old path: uses Supabase Edge Function for intent extraction
+  /// and local recipient resolution. Kept intact for fallback.
+  Future<void> _processWithEdgeFunction(String command) async {
     try {
       // Extract intent
       final intent = await _aiCommandService.extractIntent(command);
@@ -130,8 +207,8 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         if (mounted) {
           final aiResponse = intent['ai_response']?.toString() ?? '';
           _addMessage(
-            content: aiResponse.isNotEmpty 
-                ? aiResponse 
+            content: aiResponse.isNotEmpty
+                ? aiResponse
                 : "I'm here to help! Please tell me who you'd like to text and what message you want to send. For example: \"Send John Hello there\" or \"Message Sarah I'll be late\"",
             isUser: false,
             isSuccess: false,
@@ -146,8 +223,8 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         if (mounted) {
           final aiResponse = intent['ai_response']?.toString() ?? '';
           _addMessage(
-            content: aiResponse.isNotEmpty 
-                ? aiResponse 
+            content: aiResponse.isNotEmpty
+                ? aiResponse
                 : 'Could not identify recipient. Please include a name in your command.',
             isUser: false,
             isSuccess: false,
@@ -165,8 +242,8 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         if (mounted) {
           final aiResponse = intent['ai_response']?.toString() ?? '';
           _addMessage(
-            content: aiResponse.isNotEmpty 
-                ? aiResponse 
+            content: aiResponse.isNotEmpty
+                ? aiResponse
                 : 'Recipient "$recipientQuery" not found. Please check the name and try again.',
             isUser: false,
             isSuccess: false,
@@ -233,8 +310,6 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
       }
     } on AICommandException catch (e) {
       if (mounted) {
-        // Try to get ai_response from the exception context if available
-        // For now, use the exception message
         _addMessage(
           content: 'Failed to send: ${e.message}',
           isUser: false,
@@ -452,7 +527,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                                     const SizedBox(height: AppTheme.spacingXS),
                                     _buildExampleItem('"Message Sarah I\'ll be there in 10 minutes"', theme),
                                     const SizedBox(height: AppTheme.spacingXS),
-                                    _buildExampleItem('"Tell Ahmed Meeting cancelled"', theme),
+                                    _buildExampleItem('"Tell Ahmed and Sara Meeting at 3pm"', theme),
                                   ],
                                 ),
                               ],

@@ -38,6 +38,7 @@ dependencies:
   timeago: ^3.6.1
   shared_preferences: ^2.2.2
   url_launcher: ^6.2.5
+  http: ^1.2.0
   package_info_plus: ^8.0.2
   
   # Profile editing dependencies
