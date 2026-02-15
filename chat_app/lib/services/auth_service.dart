@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../exceptions/app_exceptions.dart' as exceptions;
+import 'thread_storage_service.dart';
 import '../models/user.dart' as models;
 
 /// Result of a sign-up operation.
@@ -174,6 +175,7 @@ class AuthService {
 
   /// Signs out the current user.
   Future<void> signOut() async {
+    await ThreadStorageService.clearAllThreads();
     await _client.auth.signOut();
   }
 
