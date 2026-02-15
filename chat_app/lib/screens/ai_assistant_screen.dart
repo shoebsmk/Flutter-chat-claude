@@ -238,6 +238,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
       });
 
       final pendingAction = preview['pending_action'] as Map<String, dynamic>?;
+      final previewResponse = preview['response']?.toString() ?? '';
 
       if (pendingAction != null && pendingAction['action'] == 'send_message') {
         // Extract recipients and message for confirmation
@@ -256,6 +257,9 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
           );
           return;
         }
+
+        // Don't show the raw JSON response to the user - it's not user-friendly
+        // The confirmation dialog will show the message details in a clean format
 
         // Show confirmation dialog
         final confirmed = await _showAgentConfirmationDialog(

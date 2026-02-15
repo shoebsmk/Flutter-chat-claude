@@ -26,6 +26,9 @@ class BuildInfo {
   /// UTC timestamp of when the build was created.
   static const String buildTimestamp = '$BUILD_TIMESTAMP';
 
+  /// UTC timestamp of when the app was deployed to Firebase.
+  static const String deployTimestamp = 'not yet deployed';
+
   /// Short git commit hash at build time.
   static const String gitCommit = '$GIT_COMMIT';
 
