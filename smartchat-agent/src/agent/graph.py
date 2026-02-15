@@ -9,6 +9,8 @@ This agent handles natural language commands for the SmartChat app:
 - Scheduling messages for future delivery (separate node)
 """
 
+from datetime import datetime, timezone
+
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
@@ -170,10 +172,15 @@ def agent_node(state: AgentState) -> dict:
     # Build system prompt — append confirm_only instruction when in preview mode
     confirm_instruction = CONFIRM_ONLY_INSTRUCTION if state.get("confirm_only", False) else ""
 
-    # Inject user_id context into the system message
+    # Inject user_id context and current time into the system message
+    now_utc = datetime.now(timezone.utc).isoformat()
     system_message = {
         "role": "system",
-        "content": f"{SYSTEM_PROMPT}{confirm_instruction}\n\nCurrent user's ID (sender_id): {state['user_id']}",
+        "content": (
+            f"{SYSTEM_PROMPT}{confirm_instruction}\n\n"
+            f"Current user's ID (sender_id): {state['user_id']}\n"
+            f"Current UTC time: {now_utc}"
+        ),
     }
 
     # Call the LLM with tools
