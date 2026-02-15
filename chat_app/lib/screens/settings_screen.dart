@@ -89,7 +89,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ? '${_packageInfo!.version} (Build ${_packageInfo!.buildNumber})'
         : 'Unknown';
     final buildDate = _formatBuildTimestamp(BuildInfo.buildTimestamp);
+    final deployDate = _formatBuildTimestamp(BuildInfo.deployTimestamp);
     final hasBuildInfo = BuildInfo.buildTimestamp != 'not available';
+    final hasDeployInfo = BuildInfo.deployTimestamp != 'not yet deployed';
 
     return Scaffold(
       appBar: AppBar(
@@ -187,7 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? const Text('Loading...')
                         : Text('Version $versionString'),
                     subtitle: hasBuildInfo
-                        ? Text('Built $buildDate')
+                        ? Text('Built $buildDate${hasDeployInfo ? '\nDeployed $deployDate' : ''}')
                         : const Text('Build info not available'),
                     children: [
                       _buildDetailRow(
@@ -209,6 +211,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         label: 'Built on',
                         value: BuildInfo.buildEnvironment,
                       ),
+                      if (hasDeployInfo)
+                        _buildDetailRow(
+                          context,
+                          icon: LucideIcons.rocket,
+                          label: 'Deployed',
+                          value: deployDate,
+                        ),
                       const SizedBox(height: 8),
                     ],
                   ),
