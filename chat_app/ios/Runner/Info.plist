@@ -51,5 +51,9 @@
 	<string>We need access to your camera to take profile pictures</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We need access to save photos to your library</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SmartChat uses speech recognition for voice commands to send messages</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SmartChat needs microphone access for voice commands</string>
 </dict>
 </plist>

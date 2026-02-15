@@ -5,12 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/ai_command_service.dart';
+import '../services/thread_storage_service.dart';
 import '../services/user_service.dart';
 import '../services/chat_service.dart';
 import '../services/auth_service.dart';
 import '../models/user.dart' as models;
 import '../exceptions/app_exceptions.dart';
 import '../theme/app_theme.dart';
+import '../widgets/sentiment_chart_widget.dart';
+import '../services/speech_service.dart';
 
 // Type alias for readability
 typedef User = models.User;
@@ -51,6 +54,9 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   String? _coldStartHint;
   User? _suggestionContact;
   final String _suggestionMessage = "I'll be late";
+
+  // Voice input
+  bool _isListeningToVoice = false;
   
   // Chat state
   List<Map<String, dynamic>> _messages = [];
@@ -60,6 +66,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   void initState() {
     super.initState();
     _loadUsers();
+    _loadPersistedThread();
     _connectivitySubscription =
         Connectivity().onConnectivityChanged.listen((results) {
       if (mounted) {
@@ -68,6 +75,39 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         });
       }
     });
+  }
+
+  /// Hydrates _threadId and _messages from local storage for conversation continuity.
+  Future<void> _loadPersistedThread() async {
+    final userId = AuthService().currentUserId;
+    if (userId == null) return;
+    final stored = await ThreadStorageService.loadThreadId(userId);
+    final messages = await ThreadStorageService.loadMessages(userId);
+    if (mounted) {
+      setState(() {
+        if (stored != null) _threadId = stored;
+        if (messages.isNotEmpty) {
+          _messages = messages;
+          _hasMessages = true;
+        }
+      });
+    }
+  }
+
+  /// Starts a fresh conversation by clearing the stored thread and messages.
+  Future<void> _startNewConversation() async {
+    final userId = AuthService().currentUserId;
+    if (userId != null) {
+      await ThreadStorageService.clearThreadId(userId);
+      await ThreadStorageService.clearMessages(userId);
+    }
+    if (mounted) {
+      setState(() {
+        _threadId = null;
+        _messages = [];
+        _hasMessages = false;
+      });
+    }
   }
 
   void _addMessage({
@@ -88,6 +128,11 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         _hasMessages = true;
       }
     });
+    // Persist messages to local storage
+    final userId = AuthService().currentUserId;
+    if (userId != null) {
+      ThreadStorageService.saveMessages(userId, _messages);
+    }
     _scrollToBottom();
   }
 
@@ -177,9 +222,13 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         confirmOnly: true,
       );
 
-      // Persist thread for the execute step
+      // Persist thread for the execute step and for future sessions
       if (preview['thread_id']?.toString().isNotEmpty == true) {
         _threadId = preview['thread_id'] as String;
+        final userId = AuthService().currentUserId;
+        if (userId != null) {
+          ThreadStorageService.saveThreadId(userId, _threadId!);
+        }
       }
 
       _coldStartTimer?.cancel();
@@ -559,6 +608,51 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     await _processCommand();
   }
 
+  Future<void> _toggleVoiceInput() async {
+    final speech = SpeechService.instance;
+
+    if (_isListeningToVoice) {
+      await speech.stopListening();
+      setState(() => _isListeningToVoice = false);
+      // If text was captured, auto-submit
+      if (_commandController.text.trim().isNotEmpty) {
+        _processCommand();
+      }
+      return;
+    }
+
+    final available = await speech.initialize();
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Speech recognition not available on this device.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isListeningToVoice = true);
+
+    await speech.startListening(
+      onResult: (text, isFinal) {
+        if (mounted) {
+          setState(() {
+            _commandController.text = text;
+            _commandController.selection = TextSelection.fromPosition(
+              TextPosition(offset: text.length),
+            );
+          });
+          if (isFinal) {
+            setState(() => _isListeningToVoice = false);
+          }
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -566,6 +660,14 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat Assist'),
+        actions: [
+          if (_hasMessages || _threadId != null)
+            IconButton(
+              icon: const Icon(LucideIcons.plusCircle),
+              tooltip: 'New Conversation',
+              onPressed: _isProcessing ? null : _startNewConversation,
+            ),
+        ],
       ),
       body: _isLoadingUsers
           ? const Center(child: CircularProgressIndicator())
@@ -700,6 +802,12 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                                     _buildExampleItem('"Message Sarah I\'ll be there in 10 minutes"', theme),
                                     const SizedBox(height: AppTheme.spacingXS),
                                     _buildExampleItem('"Tell Ahmed and Sara Meeting at 3pm"', theme),
+                                    const SizedBox(height: AppTheme.spacingXS),
+                                    _buildExampleItem('"Summarize my chat with Ahmed"', theme),
+                                    const SizedBox(height: AppTheme.spacingXS),
+                                    _buildExampleItem('"What did I miss today?"', theme),
+                                    const SizedBox(height: AppTheme.spacingXS),
+                                    _buildExampleItem('"How\'s the mood with Sara?"', theme),
                                   ],
                                 ),
                               ],
@@ -773,6 +881,47 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                           ),
                         ),
                         const SizedBox(width: AppTheme.spacingS),
+                        // Mic button for voice commands
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: _isListeningToVoice
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.surface,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: _isListeningToVoice
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.onSurface.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: (_isProcessing || _isOffline) ? null : _toggleVoiceInput,
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: Center(
+                                    child: Icon(
+                                      _isListeningToVoice ? LucideIcons.micOff : LucideIcons.mic,
+                                      color: _isListeningToVoice
+                                          ? Colors.white
+                                          : theme.colorScheme.onSurface.withOpacity(0.6),
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppTheme.spacingS),
+                        // Send button
                         Align(
                           alignment: Alignment.topCenter,
                           child: Padding(
@@ -1027,6 +1176,8 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
                       ],
                     ],
                   ),
+                  // Sentiment chart (only for AI responses)
+                  if (!isUser) ..._buildSentimentChart(content),
                   const SizedBox(height: AppTheme.spacingXS),
                   Text(
                     _formatTimestamp(timestamp),
@@ -1051,6 +1202,15 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildSentimentChart(String content) {
+    final chartJson = SentimentChartWidget.extractChartData(content);
+    if (chartJson == null) return [];
+    return [
+      const SizedBox(height: AppTheme.spacingS),
+      SentimentChartWidget(jsonData: chartJson),
+    ];
   }
 
   String _formatTimestamp(DateTime dateTime) {
@@ -1080,6 +1240,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     _connectivitySubscription.cancel();
     _commandController.dispose();
     _scrollController.dispose();
+    SpeechService.instance.cancel();
     super.dispose();
   }
 }
