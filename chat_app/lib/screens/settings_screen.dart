@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../config/build_info.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
 
@@ -51,6 +53,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Formats the UTC ISO 8601 timestamp into a human-readable string.
+  String _formatBuildTimestamp(String raw) {
+    if (raw == 'not available') return raw;
+    try {
+      final dt = DateTime.parse(raw).toLocal();
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ];
+      final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+      final amPm = dt.hour >= 12 ? 'PM' : 'AM';
+      final min = dt.minute.toString().padLeft(2, '0');
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year} at $hour:$min $amPm';
+    } catch (_) {
+      return raw;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -64,6 +84,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       });
     }
+
+    final versionString = _packageInfo != null
+        ? '${_packageInfo!.version} (Build ${_packageInfo!.buildNumber})'
+        : 'Unknown';
+    final buildDate = _formatBuildTimestamp(BuildInfo.buildTimestamp);
+    final hasBuildInfo = BuildInfo.buildTimestamp != 'not available';
 
     return Scaffold(
       appBar: AppBar(
@@ -152,15 +178,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child: Column(
               children: [
-                // App Version
-                ListTile(
-                  leading: const Icon(LucideIcons.info),
-                  title: const Text('App Version(Dev)'),
-                  subtitle: _isLoadingVersion
-                      ? const Text('Loading...')
-                      : Text(_packageInfo != null
-                          ? '${_packageInfo!.version} (Build ${_packageInfo!.buildNumber})'
-                          : 'Unknown'),
+                // Deployment Details — expandable
+                Theme(
+                  data: theme.copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    leading: const Icon(LucideIcons.info),
+                    title: _isLoadingVersion
+                        ? const Text('Loading...')
+                        : Text('Version $versionString'),
+                    subtitle: hasBuildInfo
+                        ? Text('Built $buildDate')
+                        : const Text('Build info not available'),
+                    children: [
+                      _buildDetailRow(
+                        context,
+                        icon: LucideIcons.gitBranch,
+                        label: 'Branch',
+                        value: BuildInfo.gitBranch,
+                      ),
+                      _buildDetailRow(
+                        context,
+                        icon: LucideIcons.gitCommit,
+                        label: 'Commit',
+                        value: BuildInfo.gitCommit,
+                        copyable: true,
+                      ),
+                      _buildDetailRow(
+                        context,
+                        icon: LucideIcons.monitor,
+                        label: 'Built on',
+                        value: BuildInfo.buildEnvironment,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
                 const Divider(height: 1),
                 // Designer Credit
@@ -206,6 +257,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds a single detail row for the deployment info expansion tile.
+  Widget _buildDetailRow(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    bool copyable = false,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+                fontFamily: copyable ? 'monospace' : null,
+              ),
+            ),
+          ),
+          if (copyable)
+            IconButton(
+              icon: Icon(LucideIcons.copy, size: 14, color: theme.colorScheme.onSurfaceVariant),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              tooltip: 'Copy commit hash',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: value));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Commit hash copied'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

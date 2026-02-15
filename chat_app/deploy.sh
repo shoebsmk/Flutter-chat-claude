@@ -88,6 +88,17 @@ else
 fi
 
 echo ""
+
+# Generate build info with real metadata
+echo -e "${BLUE}📝 Generating build info...${NC}"
+if [ -f "$SCRIPT_DIR/generate_build_info.sh" ]; then
+    bash "$SCRIPT_DIR/generate_build_info.sh"
+    echo -e "${GREEN}✅ Build info generated${NC}"
+else
+    echo -e "${YELLOW}⚠️  generate_build_info.sh not found, skipping build info${NC}"
+fi
+
+echo ""
 echo -e "${BLUE}📦 Starting deployment...${NC}"
 echo ""
 

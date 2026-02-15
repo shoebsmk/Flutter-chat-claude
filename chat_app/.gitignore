@@ -49,3 +49,9 @@ app.*.map.json
 
 # Screenshots (generated artifacts - can be regenerated with automation scripts)
 screenshots/
+
+# Firebase debug log
+firebase-debug.log
+
+# Auto-generated build info (regenerated on each build/deploy)
+lib/config/build_info.dart
