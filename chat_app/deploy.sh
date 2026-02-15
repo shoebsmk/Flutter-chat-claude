@@ -98,6 +98,15 @@ else
     echo -e "${YELLOW}⚠️  generate_build_info.sh not found, skipping build info${NC}"
 fi
 
+# Stamp the deploy timestamp into build_info.dart BEFORE building
+# so it gets compiled into the deployed app
+DEPLOY_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+BUILD_INFO="$SCRIPT_DIR/lib/config/build_info.dart"
+if [ -f "$BUILD_INFO" ]; then
+    sed -i '' "s/deployTimestamp = '.*'/deployTimestamp = '$DEPLOY_TIMESTAMP'/" "$BUILD_INFO"
+    echo -e "${GREEN}✅ Deploy timestamp set: $DEPLOY_TIMESTAMP${NC}"
+fi
+
 echo ""
 echo -e "${BLUE}📦 Starting deployment...${NC}"
 echo ""
@@ -107,14 +116,6 @@ echo ""
 if firebase deploy --only hosting; then
     echo ""
     echo -e "${GREEN}✅ Deployment successful!${NC}"
-
-    # Stamp the actual deploy time into build_info.dart
-    DEPLOY_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    BUILD_INFO="$SCRIPT_DIR/lib/config/build_info.dart"
-    if [ -f "$BUILD_INFO" ]; then
-        sed -i '' "s/deployTimestamp = '.*'/deployTimestamp = '$DEPLOY_TIMESTAMP'/" "$BUILD_INFO"
-        echo -e "${GREEN}✅ Deploy timestamp set: $DEPLOY_TIMESTAMP${NC}"
-    fi
     echo ""
     echo "Your app should be available at:"
     echo "  https://$(firebase use 2>&1 | grep -oP '(?<=Using )\S+' || echo 'your-project').web.app"
