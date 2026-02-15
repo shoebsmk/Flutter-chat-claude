@@ -1,13 +1,14 @@
 # SmartChat
 
-A full-featured AI-assisted real-time chat application built with Flutter and Supabase. SmartChat features include real-time messaging with read receipts, typing indicators, presence tracking, profile editing, image and file attachments, contact profiles, and **Chat Assist** that lets you send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there".
+A full-featured AI-powered real-time chat application built with **Flutter**, **Supabase**, and a **LangGraph AI agent backend**. SmartChat combines traditional chat features — real-time messaging, read receipts, typing indicators, presence tracking, profile editing, image attachments — with an intelligent **AI Assistant** powered by a LangGraph agent that can send messages, summarize conversations, analyze sentiment, schedule messages, generate daily digests, and accept voice commands.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
-- [Deploy to GitHub Pages](#deploy-to-github-pages) 🚀
+- [Deploy to Firebase](#deploy-to-firebase) 🚀
+- [Agent Backend Setup](#agent-backend-setup) 🤖
 - [Setup](#setup)
   - [Supabase Setup](#supabase-setup)
   - [App Configuration](#app-configuration)
@@ -43,11 +44,19 @@ A full-featured AI-assisted real-time chat application built with Flutter and Su
 - **Message previews** - See last message in chat list
 - **Real-time updates** - Messages appear instantly across devices
 
-### AI-Powered Features
-- **Chat Assist** - Send messages using natural language commands like "Send Ahmed I'll be late" or "Message John Hello there"
-  - Multi-provider AI support (OpenAI and Gemini) with automatic fallback
-  - Intelligent recipient matching
-  - Message history and confirmation dialogs
+### AI-Powered Features (LangGraph Agent)
+- **AI Assistant** - Conversational AI interface powered by a LangGraph agent backend
+  - **Natural language messaging** - "Send Ahmed I'll be late" or "Message John and Sara Hello!"
+  - **Multi-recipient support** - Send to multiple people in one command
+  - **Conversation summarization** - "Summarize my chat with Ahmed" or "What did Sara say yesterday?"
+  - **Daily digest** - "What did I miss?" or "Give me my morning briefing"
+  - **Sentiment analysis** - "How's the mood with Sara?" with visual sentiment charts
+  - **Message scheduling** - "Remind Ahmed about the meeting tomorrow at 9am"
+  - **Voice commands** - Speech-to-text input for hands-free operation
+  - **Two-step confirmation** - Preview messages before sending
+  - **Thread persistence** - Conversation continuity across sessions
+  - **Offline detection** - Graceful handling when agent is unavailable
+  - **Fallback to Edge Function** - Legacy Supabase Edge Function path as backup
 
 ## Prerequisites
 
@@ -59,6 +68,11 @@ Before you begin, ensure you have the following installed and configured:
 - **Supabase Account** and project
   - Sign up: https://supabase.com
   - Create a new project to get your API keys
+- **Python** >=3.11 (for the agent backend)
+  - Verify: `python3 --version`
+  - Install: https://www.python.org/downloads/
+- **OpenAI API key** (for the LangGraph agent)
+  - Get one: https://platform.openai.com/api-keys
 - **For iOS development** (macOS only):
   - **Xcode** (latest version recommended)
   - Verify installation: `xcode-select --print-path`
@@ -96,21 +110,49 @@ For experienced developers who want to get started quickly:
 
 > **Note:** For first-time setup, see the detailed [Setup](#setup) section below. For AI features, see [AI Command Feature Setup](#5-ai-command-feature-setup-optional).
 
-## Deploy to GitHub Pages
+## Deploy to Firebase
 
-Ready to deploy your Flutter web app? Follow the quick start guide:
+The app is deployed to Firebase Hosting. Follow the quick start guide:
 
-👉 **[Deployment Guide](docs/deployment/DEPLOY_TO_GITHUB_PAGES.md)** - Step-by-step deployment instructions
+👉 **[Firebase Deployment Guide](docs/deployment/DEPLOY_TO_FIREBASE.md)** - Step-by-step deployment instructions
 
-**Quick Summary:**
-1. Get your Supabase URL and anon key
-2. Configure GitHub Secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`)
-3. Enable GitHub Pages in repository settings
-4. Push to main branch - deployment is automatic!
+**Quick Deploy (if already configured):**
+```bash
+cd chat_app
+./deploy.sh
+```
 
-Your app will be available at: **https://shoebsmk.github.io/Flutter-chat-claude/**
+Your app will be available at: **https://smart-chat-78868.web.app**
 
-**Note:** The GitHub Actions workflow automatically builds and deploys your app whenever you push to the main branch.
+> **Note:** The deploy script automatically generates build info (git commit, branch, timestamp), builds the Flutter web app, and deploys to Firebase Hosting. See also [GitHub Pages](docs/deployment/DEPLOY_TO_GITHUB_PAGES.md) and [Vercel](docs/deployment/DEPLOY_TO_VERCEL.md) guides for alternative platforms.
+
+## Agent Backend Setup
+
+The AI Assistant features are powered by a LangGraph agent backend in the `smartchat-agent/` directory.
+
+👉 **[Agent Backend README](../smartchat-agent/README.md)** - Full setup and API documentation
+
+**Quick Start:**
+
+1. **Set up environment:**
+   ```bash
+   cd smartchat-agent
+   cp .env.example .env
+   # Fill in OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY
+   ```
+
+2. **Run locally:**
+   ```bash
+   pip install -e .
+   langgraph dev
+   ```
+
+3. **Configure Flutter app** to use local agent:
+   ```bash
+   flutter run --dart-define=AGENT_BASE_URL=http://localhost:8080
+   ```
+
+The agent is also deployed to Render at `https://smartchat-agent.onrender.com` (configured by default in `lib/config/agent_config.dart`).
 
 ## Setup
 
@@ -463,12 +505,15 @@ Key files and their purposes:
 - **App entry point and routing:**
   - `lib/main.dart` - App initialization, theme management, and session routing
   - `lib/config/supabase_config.dart` - Supabase configuration and initialization
+  - `lib/config/agent_config.dart` - LangGraph agent backend URL configuration
+  - `lib/config/build_info.dart` - Auto-generated build metadata (git commit, branch, timestamps)
 
 - **Authentication:**
-  - `lib/screens/auth_screen.dart:21` - Sign up/sign in and metadata handling
+  - `lib/screens/auth_screen.dart` - Sign up/sign in and metadata handling
+  - `lib/services/auth_service.dart` - Authentication logic (clears thread storage on logout)
 
 - **User management:**
-  - `lib/screens/chat_list_screen.dart:19` - User list stream and navigation
+  - `lib/screens/chat_list_screen.dart` - User list stream and navigation
   - `lib/services/user_service.dart` - User data operations
 
 - **Chat functionality:**
@@ -480,21 +525,35 @@ Key files and their purposes:
   - `lib/screens/profile_edit_screen.dart` - Profile editing UI
   - `lib/services/profile_service.dart` - Image upload, validation, and profile updates
 
-- **Chat Assist (AI command messaging):**
-  - `lib/screens/main_screen.dart` - Main container with bottom navigation (Chats & Chat Assist tabs)
-  - `lib/screens/ai_assistant_screen.dart` - Chat Assist interface for natural language messaging with message history
-  - `lib/services/ai_command_service.dart` - AI intent extraction and recipient resolution
-  - `supabase/functions/extract-message-intent/` - Edge Function for AI intent extraction (supports OpenAI and Gemini with automatic fallback)
+- **AI Assistant (LangGraph agent):**
+  - `lib/screens/main_screen.dart` - Main container with bottom navigation (Chats & AI Assistant tabs)
+  - `lib/screens/ai_assistant_screen.dart` - AI Assistant interface with LangGraph agent integration, voice input, sentiment charts, and thread persistence
+  - `lib/services/ai_command_service.dart` - AI intent extraction and recipient resolution (Edge Function fallback)
+  - `lib/services/speech_service.dart` - Speech-to-text voice command input
+  - `lib/services/thread_storage_service.dart` - Persists LangGraph thread IDs and message history per user
+  - `lib/widgets/sentiment_chart_widget.dart` - Visual sentiment analysis chart
+
+- **Agent backend** (`smartchat-agent/`):
+  - `server.py` - FastAPI REST API server
+  - `src/agent/graph.py` - LangGraph agent definition with system prompt
+  - `src/tools/messaging.py` - send_message, find_contacts, get_recent_conversations
+  - `src/tools/summarization.py` - Conversation summarization tool
+  - `src/tools/digest.py` - Daily digest/briefing tool
+  - `src/tools/sentiment.py` - Sentiment analysis tool
+  - `src/tools/scheduling.py` - Message scheduling tools
+  - See [`smartchat-agent/README.md`](../smartchat-agent/README.md) for full documentation
 
 - **File and image attachments:**
   - `lib/services/file_upload_service.dart` - Image compression, resizing, validation, and Supabase storage upload
   - `lib/widgets/message_bubble.dart` - Display image attachments with preview and loading states
   - `lib/widgets/message_input.dart` - Image picker (gallery and camera) integration with attachment UI
+  - `lib/widgets/image_picker_widget.dart` - Reusable image picker component
 
 - **Contact profiles:**
   - `lib/screens/contact_profile_screen.dart` - Contact details view with avatar, bio, online status, and last seen information
-  - Navigate from chat screen header to view contact profile
-  - Displays user information in a clean, organized layout
+
+- **Settings:**
+  - `lib/screens/settings_screen.dart` - Theme selection, deployment info, version details, rate app, links
 
 - **Real-time features:**
   - `lib/services/presence_service.dart` - Online/offline status tracking
@@ -503,10 +562,18 @@ Key files and their purposes:
 - **User experience:**
   - `lib/services/haptic_service.dart` - Haptic feedback for user interactions
   - `lib/services/theme_service.dart` - Theme preference persistence
+  - `lib/widgets/unread_badge.dart` - Unread message count badge
+  - `lib/utils/icon_mapper.dart` - Icon mapping utilities
 
 - **Configuration:**
   - `lib/config/supabase_config.dart` - Supabase configuration
+  - `lib/config/agent_config.dart` - Agent backend configuration
   - `lib/theme/app_theme.dart` - App theming
+
+- **Deployment:**
+  - `deploy.sh` - Firebase deployment script (builds, stamps metadata, deploys)
+  - `generate_build_info.sh` - Generates `build_info.dart` with git commit, branch, and timestamps
+  - `build.sh` - Flutter web build script (called by Firebase predeploy hook)
 
 ## Troubleshooting
 
@@ -570,15 +637,30 @@ Key files and their purposes:
   - On web, ensure you're using a modern browser with file API support
   - Verify `messages` table has attachment columns: `message_type`, `file_url`, `file_name`, `file_size`
 
-- **Chat Assist (AI command feature) not working:**
+- **AI Assistant not responding:**
+  - Verify the agent backend is running: check `https://smartchat-agent.onrender.com/health`
+  - If using a local agent, ensure it's running (`langgraph dev` or `python server.py`)
+  - Check that `AGENT_BASE_URL` is configured correctly in `lib/config/agent_config.dart`
+  - Verify your `OPENAI_API_KEY` is set in the agent's `.env` file
+  - Check agent logs for errors (LangSmith traces or server console)
+  - The app will automatically fall back to the Supabase Edge Function if the agent is unreachable
+
+- **Chat Assist fallback (Edge Function) not working:**
   - Verify API key secrets are set in Supabase Edge Functions:
     - For OpenAI: `ChatApp` secret
     - For Gemini: `GEMINI_API_KEY` secret
     - For provider selection: `AI_PROVIDER` and `AI_FALLBACK_PROVIDER` (optional)
   - Ensure the `extract-message-intent` Edge Function is deployed
   - Check Edge Function logs in Supabase dashboard for errors
-  - Verify your API keys are valid and have quota remaining
-  - See `DEPLOYMENT_GUIDE.md` and `supabase/functions/extract-message-intent/README.md` for detailed setup instructions
+
+- **Voice input not working:**
+  - Ensure microphone permissions are granted on your device
+  - On web, ensure you're using HTTPS (required for `speech_to_text`)
+  - Speech recognition may not be available on all platforms/browsers
+
+- **Sentiment chart not displaying:**
+  - Ensure the agent returned sentiment data in its response
+  - Check the `fl_chart` package is installed: `flutter pub get`
 
 - **General app issues:**
   - If the app doesn't connect to Supabase, verify your credentials in `lib/config/supabase_config.dart`
@@ -594,8 +676,10 @@ All documentation is organized in the [`docs/`](docs/) directory:
 
 - **📚 [Documentation Index](docs/README.md)** - Complete documentation overview
 - **🏗️ [Architecture](docs/architecture/ARCHITECTURE.md)** - Detailed system design, data flows, and component details
+- **🤖 [Agent Backend](../smartchat-agent/README.md)** - LangGraph agent setup, API, and deployment
 - **🚀 [Deployment Guides](docs/deployment/)** - Deployment guides for Firebase, GitHub Pages, Vercel
 - **🗄️ [Database Scripts](docs/database/)** - SQL scripts and database management
+- **📅 [Scheduling Plan](docs/SCHEDULING_PLAN.md)** - Message scheduling feature design
 - **📸 [Showcase](docs/showcase/)** - Screenshots and feature documentation
 - **📢 [Marketing](docs/marketing/)** - Marketing and promotional content
 
@@ -603,15 +687,15 @@ All documentation is organized in the [`docs/`](docs/) directory:
 - **Testing:** See `test/TESTING.md` for testing instructions and coverage information
 - **Integration Tests:** See `integration_test/README.md` for integration test documentation
 
-### Chat Assist (AI Command Feature)
-- **Implementation details:** [`docs/architecture/AI_COMMAND_MESSAGING_PLAN.md`](docs/architecture/AI_COMMAND_MESSAGING_PLAN.md)
-- **Implementation summary:** [`docs/architecture/AI_COMMAND_IMPLEMENTATION_SUMMARY.md`](docs/architecture/AI_COMMAND_IMPLEMENTATION_SUMMARY.md)
-- **Security documentation:** [`docs/architecture/AI_FEATURE_SECURITY.md`](docs/architecture/AI_FEATURE_SECURITY.md)
-- **Edge Function README:** `supabase/functions/extract-message-intent/README.md`
+### AI Assistant (LangGraph Agent)
+- **Agent backend:** [`smartchat-agent/README.md`](../smartchat-agent/README.md)
+- **Scheduling plan:** [`docs/SCHEDULING_PLAN.md`](docs/SCHEDULING_PLAN.md)
+- **Legacy Edge Function:** `supabase/functions/extract-message-intent/README.md`
+- **AI security documentation:** [`docs/architecture/AI_FEATURE_SECURITY.md`](docs/architecture/AI_FEATURE_SECURITY.md)
 
 ### Development Resources
 - **Sample credentials:** `chat_app/my_users.txt` (for testing flows)
-- **Troubleshooting guide:** See `TROUBLESHOOTING.md` for common issues and solutions
+- **Troubleshooting guide:** See [Troubleshooting](#troubleshooting) section above
 
 ### Security Best Practices
 - **Never commit secrets** to version control

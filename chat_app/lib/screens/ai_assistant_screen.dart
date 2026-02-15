@@ -601,15 +601,20 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
     );
   }
 
-  Future<void> _handleSuggestionTap() async {
+  void _handleSuggestionTap() {
     if (_suggestionContact == null || _isProcessing) return;
 
-    // Construct command string
+    // Construct command string and fill the text field without auto-submitting
     final command = 'Send ${_suggestionContact!.username} $_suggestionMessage';
-    
-    // Set the command in the text field and process it
     _commandController.text = command;
-    await _processCommand();
+    _commandController.selection = TextSelection.fromPosition(
+      TextPosition(offset: command.length),
+    );
+
+    // Hide the suggestion button so the welcome screen looks ready to send
+    setState(() {
+      _showSuggestionButton = false;
+    });
   }
 
   Future<void> _toggleVoiceInput() async {

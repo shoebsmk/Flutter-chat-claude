@@ -4,12 +4,18 @@ This directory contains all project documentation organized by category.
 
 ## 📁 Directory Structure
 
+### 🤖 [Agent Backend](../../smartchat-agent/README.md)
+LangGraph AI agent backend documentation:
+- Architecture, available tools, and API endpoints
+- Setup, environment variables, and local development
+- Deployment to Render and Docker
+
 ### 🚀 [Deployment](./deployment/)
 Guides for deploying the application to various platforms:
-- **Firebase Hosting** - Deploy to Firebase
-- **GitHub Pages** - Deploy to GitHub Pages
-- **Vercel** - Deploy to Vercel
-- **General Deployment Guide** - Overview and best practices
+- **[Firebase Hosting](./deployment/DEPLOY_TO_FIREBASE.md)** - Primary deployment platform
+- **[GitHub Pages](./deployment/DEPLOY_TO_GITHUB_PAGES.md)** - Alternative deployment
+- **[Vercel](./deployment/DEPLOY_TO_VERCEL.md)** - Alternative deployment
+- **[General Deployment Guide](./deployment/DEPLOYMENT_GUIDE.md)** - Overview and best practices
 
 ### 🗄️ [Database](./database/)
 Database scripts and guides:
@@ -19,12 +25,14 @@ Database scripts and guides:
 
 ### 🏗️ [Architecture](./architecture/)
 Technical documentation and architecture:
-- **ARCHITECTURE.md** - Complete system architecture
+- **[ARCHITECTURE.md](./architecture/ARCHITECTURE.md)** - Complete system architecture (Flutter + LangGraph agent)
 - **AI Features** - AI command implementation and security
 - **Implementation History** - Development timeline
 - **Feature Suggestions** - Future feature ideas
 - **UI Improvements** - UI/UX enhancement notes
-- **Dart SDK Fix** - SDK version troubleshooting
+
+### 📅 [Scheduling Plan](./SCHEDULING_PLAN.md)
+Message scheduling feature design and implementation plan.
 
 ### 📸 [Showcase](./showcase/)
 Screenshot and feature showcase documentation:
@@ -39,14 +47,16 @@ Marketing and promotional content:
 ## 📚 Additional Documentation
 
 - **Main README** - See `/README.md` in project root
+- **Agent Backend** - See `/smartchat-agent/README.md`
 - **Testing** - See `/test/TESTING.md` and `/integration_test/README.md`
-- **Scripts** - See `/scripts/` directory for automation scripts
 - **Supabase Functions** - See `/supabase/functions/` for Edge Function docs
 
 ## 🔍 Quick Links
 
-- [Deployment Guide](./deployment/DEPLOYMENT_GUIDE.md)
+- [Firebase Deployment Guide](./deployment/DEPLOY_TO_FIREBASE.md)
 - [Architecture Overview](./architecture/ARCHITECTURE.md)
+- [Agent Backend](../../smartchat-agent/README.md)
 - [Database Setup](./database/supabase_setup.sql)
 - [Delete User Guide](./database/DELETE_USER_GUIDE.md)
+- [Scheduling Plan](./SCHEDULING_PLAN.md)
 

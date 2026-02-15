@@ -24,9 +24,16 @@ This is a real-time chat application built with Flutter and Supabase. The app en
 - Online/offline status (presence)
 - User search functionality
 - Profile editing (username, bio, profile picture)
-- **AI-powered command-based messaging** - Send messages using natural language commands
+- Image and file attachments
+- Contact profiles
+- **LangGraph AI agent backend** with natural language messaging
+- **Conversation summarization** and **daily digest**
+- **Sentiment analysis** with visual charts
+- **Message scheduling** for future delivery
+- **Voice commands** via speech-to-text
+- **Thread persistence** for conversation continuity
 - Dark/Light theme support
-- Smooth animations and modern UI
+- Firebase Hosting deployment with build metadata
 
 ---
 
@@ -40,19 +47,26 @@ graph TB
         UI[UI Layer<br/>Screens & Widgets]
         Services[Service Layer<br/>Business Logic]
         Models[Models Layer<br/>Data Classes]
-        Config[Config Layer<br/>Supabase Setup]
+        Config[Config Layer<br/>Supabase + Agent Setup]
+    end
+    
+    subgraph "Agent Backend - Python"
+        AgentServer[FastAPI Server<br/>server.py]
+        LangGraph[LangGraph Agent<br/>graph.py]
+        AgentTools[Agent Tools<br/>messaging, summarization,<br/>digest, sentiment, scheduling]
     end
     
     subgraph "Backend - Supabase"
         Auth[Supabase Auth<br/>Authentication]
         DB[(PostgreSQL<br/>Database)]
         Realtime[Realtime<br/>Subscriptions]
-        Storage[Storage<br/>Optional]
-        EdgeFunctions[Edge Functions<br/>AI Intent Extraction]
+        Storage[Storage<br/>Files & Images]
+        EdgeFunctions[Edge Functions<br/>AI Intent Extraction<br/>Legacy Fallback]
     end
     
     subgraph "External Services"
-        AIProviders[AI Providers<br/>OpenAI & Gemini]
+        OpenAI[OpenAI API<br/>GPT-4o-mini]
+        LangSmith[LangSmith<br/>Tracing & Observability]
     end
     
     UI --> Services
@@ -61,10 +75,13 @@ graph TB
     Config --> Auth
     Config --> DB
     Config --> Realtime
-    Config --> EdgeFunctions
-    Auth --> DB
-    Realtime --> DB
-    EdgeFunctions --> AIProviders
+    Config --> AgentServer
+    AgentServer --> LangGraph
+    LangGraph --> AgentTools
+    AgentTools --> DB
+    LangGraph --> OpenAI
+    LangGraph --> LangSmith
+    EdgeFunctions --> OpenAI
 ```
 
 ### Layered Architecture
@@ -72,8 +89,8 @@ graph TB
 ```mermaid
 graph TD
     subgraph "Presentation Layer"
-        Screens[Screens<br/>Auth, MainScreen, ChatList, Chat, AIAssistant]
-        Widgets[Widgets<br/>MessageBubble, UserAvatar, etc]
+        Screens[Screens<br/>Auth, MainScreen, ChatList, Chat,<br/>AIAssistant, Settings, ProfileEdit, ContactProfile]
+        Widgets[Widgets<br/>MessageBubble, UserAvatar, SentimentChart,<br/>ImagePicker, UnreadBadge, etc]
     end
     
     subgraph "Service Layer"
@@ -84,6 +101,9 @@ graph TD
         PresenceService[PresenceService]
         TypingService[TypingService]
         AICommandService[AICommandService]
+        SpeechService[SpeechService]
+        ThreadStorageService[ThreadStorageService]
+        FileUploadService[FileUploadService]
     end
     
     subgraph "Model Layer"
@@ -93,11 +113,19 @@ graph TD
     
     subgraph "Config Layer"
         SupabaseConfig[SupabaseConfig]
+        AgentConfig[AgentConfig]
+    end
+    
+    subgraph "Agent Backend - Python"
+        AgentServer[FastAPI Server]
+        LangGraphAgent[LangGraph Agent]
+        AgentTools[Tools: messaging, summarization,<br/>digest, sentiment, scheduling]
     end
     
     subgraph "External Services"
-        SupabaseBackend[Supabase Backend<br/>Auth, Database, Realtime, Edge Functions]
-        AIProviders[AI Providers<br/>OpenAI & Gemini with Fallback]
+        SupabaseBackend[Supabase Backend<br/>Auth, Database, Realtime, Storage]
+        OpenAI[OpenAI API]
+        LangSmith[LangSmith Tracing]
     end
     
     Screens --> AuthService
@@ -107,16 +135,8 @@ graph TD
     Screens --> PresenceService
     Screens --> TypingService
     Screens --> AICommandService
-    Widgets --> AuthService
-    Widgets --> ChatService
-    Widgets --> UserService
-    Widgets --> ProfileService
-    Widgets --> PresenceService
-    Widgets --> TypingService
-    
-    AuthService --> UserModel
-    ChatService --> MessageModel
-    UserService --> UserModel
+    Screens --> SpeechService
+    Screens --> ThreadStorageService
     
     AuthService --> SupabaseConfig
     ChatService --> SupabaseConfig
@@ -124,10 +144,15 @@ graph TD
     ProfileService --> SupabaseConfig
     PresenceService --> SupabaseConfig
     TypingService --> SupabaseConfig
-    AICommandService --> SupabaseConfig
+    AICommandService --> AgentConfig
     
     SupabaseConfig --> SupabaseBackend
-    SupabaseBackend --> AIProviders
+    AgentConfig --> AgentServer
+    AgentServer --> LangGraphAgent
+    LangGraphAgent --> AgentTools
+    AgentTools --> SupabaseBackend
+    LangGraphAgent --> OpenAI
+    LangGraphAgent --> LangSmith
 ```
 
 ---
@@ -138,7 +163,9 @@ graph TD
 lib/
 ├── main.dart                    # App entry point
 ├── config/
-│   └── supabase_config.dart    # Supabase initialization
+│   ├── supabase_config.dart    # Supabase initialization
+│   ├── agent_config.dart       # LangGraph agent backend URL config
+│   └── build_info.dart         # Auto-generated build metadata
 ├── exceptions/
 │   └── app_exceptions.dart     # Custom exception classes
 ├── models/
@@ -149,51 +176,69 @@ lib/
 │   ├── main_screen.dart        # Main container with bottom navigation
 │   ├── chat_list_screen.dart   # List of conversations
 │   ├── chat_screen.dart        # Individual chat screen
-│   ├── ai_assistant_screen.dart # AI command interface
+│   ├── ai_assistant_screen.dart # AI Assistant with LangGraph integration
 │   ├── profile_edit_screen.dart # Profile editing screen
-│   └── settings_screen.dart    # App settings screen
+│   ├── contact_profile_screen.dart # Contact details view
+│   └── settings_screen.dart    # App settings, deployment info, theme
 ├── services/
 │   ├── auth_service.dart       # Authentication logic
 │   ├── chat_service.dart       # Chat/messaging logic
 │   ├── user_service.dart       # User management logic
 │   ├── presence_service.dart   # Online/offline status management
 │   ├── typing_service.dart     # Typing indicators management
-│   ├── ai_command_service.dart # AI intent extraction and recipient resolution
+│   ├── ai_command_service.dart # AI intent extraction (Edge Function fallback)
+│   ├── speech_service.dart     # Speech-to-text voice input
+│   ├── thread_storage_service.dart # LangGraph thread persistence
+│   ├── file_upload_service.dart # Image upload/compression
+│   ├── profile_service.dart    # Profile image and data management
+│   ├── haptic_service.dart     # Haptic feedback
 │   └── theme_service.dart      # Theme preference persistence
 ├── theme/
 │   └── app_theme.dart          # App theming
 ├── utils/
 │   ├── constants.dart          # App constants
-│   └── date_utils.dart         # Date formatting utilities (AppDateUtils)
-│                                # - Consistent date parsing for Supabase timestamps
-│                                # - UTC timezone handling
-│                                # - Relative time formatting
+│   ├── date_utils.dart         # Date formatting utilities (AppDateUtils)
+│   └── icon_mapper.dart        # Icon mapping utilities
 └── widgets/
     ├── loading_shimmer.dart    # Loading placeholder
     ├── message_bubble.dart     # Individual message widget
     ├── message_input.dart      # Message input field
-    └── user_avatar.dart        # User avatar widget
+    ├── user_avatar.dart        # User avatar widget
+    ├── sentiment_chart_widget.dart # Sentiment analysis chart
+    ├── image_picker_widget.dart # Image picker component
+    └── unread_badge.dart       # Unread message count badge
 
-supabase/
-└── functions/
-    └── extract-message-intent/
-        ├── index.ts            # Edge Function for AI intent extraction
-        └── README.md           # Function documentation
+smartchat-agent/                 # LangGraph AI agent backend
+├── server.py                   # FastAPI REST API server
+├── langgraph.json              # LangGraph Platform config
+├── pyproject.toml              # Python dependencies
+├── Dockerfile                  # Container config
+├── render.yaml                 # Render deployment config
+└── src/
+    ├── agent/
+    │   └── graph.py            # LangGraph agent definition
+    └── tools/
+        ├── messaging.py        # send_message, find_contacts
+        ├── summarization.py    # Conversation summarization
+        ├── digest.py           # Daily digest/briefing
+        ├── sentiment.py        # Sentiment analysis
+        ├── scheduling.py       # Message scheduling
+        └── supabase_client.py  # Shared Supabase client
 ```
 
 ### Directory Responsibilities
 
 | Directory | Purpose |
 |-----------|---------|
-| `config/` | Configuration and initialization code (Supabase setup) |
+| `config/` | Configuration and initialization code (Supabase, Agent, Build Info) |
 | `exceptions/` | Custom exception classes for error handling |
 | `models/` | Data classes representing domain entities |
 | `screens/` | Full-screen UI components (pages/views) |
 | `services/` | Business logic and data access layer |
 | `theme/` | App-wide theming and styling |
-| `utils/` | Helper functions and constants |
+| `utils/` | Helper functions, constants, and utilities |
 | `widgets/` | Reusable UI components |
-| `supabase/functions/` | Supabase Edge Functions (serverless functions) |
+| `smartchat-agent/` | LangGraph AI agent backend (Python/FastAPI) |
 
 ---
 
@@ -485,6 +530,61 @@ Message {
 - Defaults to System theme if no preference is saved
 - Static methods for easy access
 
+#### SpeechService
+**Purpose:** Speech-to-text voice command input
+
+**Key Methods:**
+- `initialize()` - Initialize speech recognition engine (safe to call multiple times)
+- `startListening(onResult)` - Start listening, calls back with recognized text and final flag
+- `stopListening()` - Stop and keep recognized text
+- `cancel()` - Cancel and discard recognized text
+
+**Dependencies:**
+- `speech_to_text` package
+
+**Features:**
+- Singleton pattern (SpeechService.instance)
+- Partial results during speech recognition
+- Auto-initialization on first listen
+- Platform-aware availability checking
+- Error handling and status callbacks
+
+#### ThreadStorageService
+**Purpose:** Persists LangGraph agent thread IDs and message history locally per user
+
+**Key Methods:**
+- `loadThreadId(userId)` / `saveThreadId(userId, threadId)` / `clearThreadId(userId)` - Thread ID management
+- `loadMessages(userId)` / `saveMessages(userId, messages)` / `clearMessages(userId)` - Message history persistence
+- `clearAllThreads()` - Remove all stored threads and messages (used on logout)
+
+**Dependencies:**
+- SharedPreferences (local storage)
+- dart:convert (JSON serialization)
+
+**Features:**
+- Per-user storage with key prefixes
+- DateTime serialization to/from ISO strings
+- Integrated with AuthService for cleanup on logout
+- Enables conversation continuity across screen re-entries and app restarts
+
+#### FileUploadService
+**Purpose:** Handles image compression, validation, and upload to Supabase Storage
+
+**Key Methods:**
+- `uploadImage()` - Upload image to Supabase Storage bucket
+- `compressImage()` - Compress and resize images (max 2000x2000px)
+- `validateImage()` - Validate file size, type, and dimensions
+
+**Dependencies:**
+- Supabase Client (storage)
+- Image processing library
+- Platform-specific file handling
+
+**Features:**
+- Cross-platform support (web uses uploadBinary, mobile uses File)
+- Automatic compression and optimization
+- Error handling with rollback
+
 ---
 
 ### Screens
@@ -532,27 +632,33 @@ Message {
 - Search filtering
 
 #### AIAssistantScreen
-**Purpose:** AI-powered command interface for natural language messaging
+**Purpose:** AI-powered conversational interface backed by LangGraph agent
 
 **Features:**
-- Natural language command input
-- AI intent extraction via Edge Function (multi-provider support)
+- Natural language command input with voice support
+- LangGraph agent integration via FastAPI backend (primary path)
+- Edge Function fallback for legacy intent extraction
+- Two-step confirmation flow (preview then execute)
+- Multi-recipient message support
+- Conversation summarization display
+- Sentiment analysis with visual charts (`SentimentChartWidget`)
+- Daily digest display
+- Message scheduling commands
+- Thread persistence across sessions (via `ThreadStorageService`)
 - Message history tracking (user and AI messages)
 - Automatic scrolling to latest message
-- Recipient resolution and confirmation dialog
-- Message sending with user confirmation
-- Error handling with AI-generated suggestions
-- Success/error message displays within chat interface
-- Contextual responses based on authentication state
-- Example command hints
-- Renamed to "Chat Assist" for consistency
+- Offline detection with retry logic
+- Example command hints and suggestions
+- Voice input toggle with speech-to-text
 
 **State Management:**
 - Local state with StatefulWidget
 - Loading states during AI processing
-- Error states for failed extractions
-- Message history state
+- Error states for failed requests
+- Message history state with local persistence
+- Thread ID management for conversation continuity
 - Authentication state integration
+- Voice input state (listening/not listening)
 
 #### ChatScreen
 **Purpose:** Individual conversation interface
@@ -586,18 +692,23 @@ Message {
 - Keyboard-aware layout management
 
 #### SettingsScreen
-**Purpose:** App settings and preferences interface
+**Purpose:** App settings, preferences, and information interface
 
 **Features:**
-- Theme selection (System, Light, Dark)
-- Radio button selection for theme modes
-- Real-time theme updates
-- Theme preference persistence
+- Theme selection (System, Light, Dark) with radio buttons
+- Real-time theme updates with persistence
+- Deployment information (build timestamp, deploy timestamp, git commit, git branch, build environment)
+- App version and build number display
+- Rate app functionality
+- External links (Privacy Policy, Terms of Service)
+- URL launcher integration
+- Clipboard copy for deployment details
 
 **State Management:**
 - Local state with StatefulWidget
 - Syncs with MyApp theme state
-- Updates UI when theme changes
+- Package info loaded asynchronously
+- Build info from auto-generated `BuildInfo` class
 
 ---
 
@@ -610,6 +721,7 @@ Message {
 - Sent vs received styling
 - Read/unread indicators
 - Timestamp display
+- Image attachment display with preview and loading states
 - Smooth animations
 
 #### UserAvatar
@@ -619,6 +731,7 @@ Message {
 - Fallback to initials if no image
 - Color coding by user
 - Circular design
+- Online status indicator
 
 #### MessageInput
 **Purpose:** Message composition widget
@@ -626,6 +739,8 @@ Message {
 **Features:**
 - Text input field
 - Send button
+- Image picker integration (gallery and camera)
+- Attachment preview
 - Input validation
 - Auto-focus
 
@@ -636,6 +751,31 @@ Message {
 - Shimmer animation effect
 - List item placeholders
 - Used during data loading
+
+#### SentimentChartWidget
+**Purpose:** Visualize sentiment analysis results
+
+**Features:**
+- Line chart rendering via `fl_chart` package
+- Displays sentiment scores over time
+- Color-coded sentiment levels
+- Integrated into AI Assistant message bubbles
+
+#### ImagePickerWidget
+**Purpose:** Reusable image selection component
+
+**Features:**
+- Gallery and camera source options
+- Cross-platform file handling
+- Image preview before upload
+
+#### UnreadBadge
+**Purpose:** Display unread message count
+
+**Features:**
+- Circular badge with count
+- Animated appearance
+- Themed styling
 
 ---
 
@@ -678,41 +818,59 @@ Message {
   - `google_fonts` - Custom typography
   - `flutter_animate` - Animations
   - `shimmer` - Loading effects
+  - `lucide_icons` - Icon set
+  - `fl_chart` - Sentiment analysis charts
 
-### Backend
+### Agent Backend (Python)
+- **Framework:** FastAPI + Uvicorn
+- **AI Orchestration:** LangGraph + LangChain
+- **LLM:** OpenAI GPT-4o-mini
+- **Database:** Supabase Python client (service role)
+- **Deployment:** Docker on Render (free tier)
+- **Observability:** LangSmith tracing
+- **Python:** ≥3.11
+
+### Backend (Supabase)
 - **BaaS:** Supabase
   - **Auth:** Email/password authentication
   - **Database:** PostgreSQL (via Supabase)
   - **Realtime:** WebSocket-based real-time subscriptions
-  - **Edge Functions:** Serverless functions for AI intent extraction
+  - **Storage:** Profile pictures and message attachments
+  - **Edge Functions:** Legacy AI intent extraction (fallback)
 
 ### External Services
-- **AI Providers:** Natural language processing for command extraction
-  - **OpenAI:** Primary provider (default)
-    - Model: `gpt-5-nano` (fast and cost-effective)
-  - **Google Gemini API:** Alternative/fallback provider
-    - Models: `gemini-1.5-flash` (primary), `gemini-pro` (fallback)
-    - Automatic model fallback within provider
-  - **Provider Fallback:** Automatic switching between providers for reliability
-  - **Configuration:** Via Supabase Edge Function secrets (`AI_PROVIDER`, `AI_FALLBACK_PROVIDER`)
+- **OpenAI API:** GPT-4o-mini for agent reasoning and tool calling
+- **LangSmith:** Execution tracing and observability
 
-### Key Dependencies
+### Key Flutter Dependencies
 
 ```yaml
-supabase_flutter: ^2.0.0      # Backend integration (includes Edge Functions)
+supabase_flutter: ^2.0.0      # Backend integration
 intl: ^0.19.0                  # Internationalization
 google_fonts: ^6.1.0           # Typography
 shimmer: ^3.0.0                # Loading animations
 flutter_animate: ^4.5.0        # UI animations
 timeago: ^3.6.1                # Relative time formatting
 shared_preferences: ^2.2.2     # Local storage for preferences
+speech_to_text: ^7.0.0         # Voice command input
+connectivity_plus: ^6.0.0      # Network connectivity detection
+lucide_icons: ^0.257.0         # Icon set
+package_info_plus: ^8.0.0      # App version info
+url_launcher: ^6.2.0           # External URL handling
+fl_chart: ^0.70.0              # Sentiment analysis charts
 ```
 
-**Supabase Edge Functions:**
-- `extract-message-intent`: AI intent extraction using multi-provider support
-  - Language: TypeScript (Deno runtime)
-  - External APIs: OpenAI API and Google Gemini API
-  - Features: Multi-provider support, provider fallback, model fallback, CORS support, input validation, AI response suggestions
+### Key Python Dependencies
+
+```toml
+langgraph >= 0.4.1             # Agent orchestration
+langchain >= 0.3.0             # LLM framework
+langchain-openai >= 0.3.0      # OpenAI integration
+supabase >= 2.0.0              # Supabase Python client
+python-dotenv >= 1.0.0         # Environment variables
+pydantic >= 2.0.0              # Data validation
+python-dateutil >= 2.8.0       # Date utilities
+```
 
 ---
 
@@ -999,19 +1157,28 @@ AppTheme {
 Potential improvements and features:
 
 - [ ] Push notifications
-- [ ] Image/file sharing
+- [x] Image/file sharing
 - [ ] Message reactions
 - [ ] Group chats
 - [ ] Message search
 - [ ] Message deletion
 - [x] Profile editing (username, bio, profile picture)
 - [x] Theme toggle UI
-- [x] AI-powered command-based messaging
+- [x] AI-powered command-based messaging (LangGraph agent)
+- [x] Conversation summarization
+- [x] Daily digest / briefing
+- [x] Sentiment analysis with charts
+- [x] Message scheduling
+- [x] Voice commands (speech-to-text)
+- [x] Thread persistence
+- [x] Offline detection and retry logic
+- [x] Multi-recipient messaging
+- [x] Firebase Hosting deployment
+- [x] Build metadata and deploy timestamps
 - [ ] Read receipts (detailed)
 - [ ] Message encryption
-- [ ] Multiple recipient support in AI commands
-- [ ] Scheduled messages via AI commands
-- [ ] Command history for AI Assistant
+- [ ] Auto-responder via agent
+- [ ] Smart message suggestions
 
 ---
 
@@ -1151,5 +1318,5 @@ Update this document when:
 
 ---
 
-**Last Updated:** December 2025
-**Version:** 1.1.0
+**Last Updated:** February 2026
+**Version:** 2.0.0
