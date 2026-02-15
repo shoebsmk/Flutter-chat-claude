@@ -2,6 +2,9 @@
 
 Allows users to schedule messages for future delivery,
 list pending scheduled messages, and cancel them.
+
+Persistence: Supabase `scheduled_messages` table (replaces APScheduler).
+Execution: A Supabase Edge Function runs on a cron schedule to send due messages.
 """
 
 from datetime import datetime, timezone
@@ -10,7 +13,7 @@ from dateutil import parser as dateutil_parser
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
-from src.scheduler import get_scheduler, send_scheduled_message
+from src.tools.supabase_client import get_supabase_client
 
 
 # --- Schemas ---
@@ -43,7 +46,7 @@ class CancelScheduledMessageInput(BaseModel):
     """Input for cancelling a scheduled message."""
 
     job_id: str = Field(
-        description="The job ID of the scheduled message to cancel"
+        description="The UUID of the scheduled message to cancel"
     )
 
 
@@ -84,30 +87,41 @@ def schedule_message(
             "error": "Scheduled time must be in the future.",
         }
 
-    scheduler = get_scheduler()
-    job = scheduler.add_job(
-        send_scheduled_message,
-        trigger="date",
-        run_date=send_time,
-        kwargs={
-            "sender_id": sender_id,
-            "recipient_names": recipient_names,
-            "message": message,
-        },
-        replace_existing=False,
-    )
+    client = get_supabase_client()
 
-    return {
-        "status": "scheduled",
-        "job_id": job.id,
-        "recipients": recipient_names,
-        "message": message,
-        "send_at": send_time.isoformat(),
-        "summary": (
-            f"Message to {', '.join(recipient_names)} scheduled for "
-            f"{send_time.strftime('%Y-%m-%d %H:%M %Z')}."
-        ),
-    }
+    try:
+        result = (
+            client.table("scheduled_messages")
+            .insert(
+                {
+                    "sender_id": sender_id,
+                    "recipient_names": recipient_names,
+                    "message": message,
+                    "send_at": send_time.isoformat(),
+                    "status": "pending",
+                }
+            )
+            .execute()
+        )
+
+        row = result.data[0] if result.data else {}
+
+        return {
+            "status": "scheduled",
+            "job_id": row.get("id", "unknown"),
+            "recipients": recipient_names,
+            "message": message,
+            "send_at": send_time.isoformat(),
+            "summary": (
+                f"Message to {', '.join(recipient_names)} scheduled for "
+                f"{send_time.strftime('%Y-%m-%d %H:%M %Z')}."
+            ),
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": f"Failed to schedule message: {str(e)}",
+        }
 
 
 @tool(args_schema=ListScheduledMessagesInput)
@@ -117,46 +131,73 @@ def list_scheduled_messages(sender_id: str) -> dict:
     Use this when the user asks to see their scheduled messages,
     pending messages, or what's queued for sending.
     """
-    scheduler = get_scheduler()
-    jobs = scheduler.get_jobs()
+    client = get_supabase_client()
 
-    user_jobs = []
-    for job in jobs:
-        kwargs = job.kwargs or {}
-        if kwargs.get("sender_id") == sender_id:
-            user_jobs.append(
+    try:
+        result = (
+            client.table("scheduled_messages")
+            .select("id, recipient_names, message, send_at, status, created_at")
+            .eq("sender_id", sender_id)
+            .eq("status", "pending")
+            .order("send_at")
+            .execute()
+        )
+
+        scheduled = []
+        for row in result.data or []:
+            scheduled.append(
                 {
-                    "job_id": job.id,
-                    "recipients": kwargs.get("recipient_names", []),
-                    "message": kwargs.get("message", ""),
-                    "send_at": (
-                        job.next_run_time.isoformat()
-                        if job.next_run_time
-                        else "unknown"
-                    ),
+                    "job_id": row["id"],
+                    "recipients": row["recipient_names"],
+                    "message": row["message"],
+                    "send_at": row["send_at"],
+                    "created_at": row["created_at"],
                 }
             )
 
-    return {
-        "sender_id": sender_id,
-        "pending_count": len(user_jobs),
-        "scheduled_messages": user_jobs,
-    }
+        return {
+            "sender_id": sender_id,
+            "pending_count": len(scheduled),
+            "scheduled_messages": scheduled,
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": f"Failed to list scheduled messages: {str(e)}",
+        }
 
 
 @tool(args_schema=CancelScheduledMessageInput)
 def cancel_scheduled_message(job_id: str) -> dict:
-    """Cancel a previously scheduled message by its job ID.
+    """Cancel a previously scheduled message by its ID.
 
     Use this when the user asks to cancel or remove a scheduled message.
     The job_id comes from list_scheduled_messages or schedule_message output.
     """
-    scheduler = get_scheduler()
+    client = get_supabase_client()
+
     try:
-        scheduler.remove_job(job_id)
-        return {"status": "cancelled", "job_id": job_id}
+        # Only cancel if still pending
+        result = (
+            client.table("scheduled_messages")
+            .update({"status": "cancelled"})
+            .eq("id", job_id)
+            .eq("status", "pending")
+            .execute()
+        )
+
+        if result.data:
+            return {"status": "cancelled", "job_id": job_id}
+        else:
+            return {
+                "status": "error",
+                "error": (
+                    f"Could not cancel message {job_id}. "
+                    "It may have already been sent or cancelled."
+                ),
+            }
     except Exception as e:
         return {
             "status": "error",
-            "error": f"Could not cancel job {job_id}: {str(e)}",
+            "error": f"Could not cancel message {job_id}: {str(e)}",
         }

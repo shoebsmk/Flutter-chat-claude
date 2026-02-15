@@ -8,7 +8,6 @@ import json
 import os
 import re
 import uuid
-from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -25,21 +24,7 @@ from src.agent.graph import workflow
 memory = MemorySaver()
 agent = workflow.compile(checkpointer=memory)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Start scheduler on startup, shut it down on shutdown."""
-    from src.scheduler import get_scheduler
-
-    scheduler = get_scheduler()
-    scheduler.start()
-    print("[server] Scheduler started")
-    yield
-    scheduler.shutdown(wait=False)
-    print("[server] Scheduler stopped")
-
-
-app = FastAPI(title="SmartChat Agent", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="SmartChat Agent", version="0.1.0")
 
 # Allow Flutter web app to call this API
 app.add_middleware(

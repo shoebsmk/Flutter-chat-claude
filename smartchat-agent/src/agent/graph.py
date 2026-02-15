@@ -5,6 +5,8 @@ This agent handles natural language commands for the SmartChat app:
 - Find contacts
 - Get recent conversations
 - Human-in-the-loop confirmation before sending messages
+- Summarization, digest, sentiment analysis
+- Scheduling messages for future delivery (separate node)
 """
 
 from langchain_openai import ChatOpenAI
@@ -88,6 +90,11 @@ SCOPE & GUARDRAILS:
 25. Refuse to send messages containing threats, harassment, or abuse. Politely decline
     and suggest rephrasing.
 
+IMPORTANT — tool call discipline:
+26. Do NOT mix scheduling tools and general tools in the same response. If you need to
+    call a scheduling tool, only call scheduling tools in that turn. If you need to
+    call a general tool, only call general tools in that turn.
+
 EXAMPLES:
 - "Send Ahmed and Sara I'll be late" -> use send_message with recipient_names=["Ahmed", "Sara"]
 - "Text John hello" -> use send_message with recipient_names=["John"]
@@ -110,23 +117,34 @@ EXAMPLES:
 - "What's the weather?" -> respond with "I can only help with messaging..." (see rule 22)
 """
 
-# Tools available to the agent
-tools = [
+# --- Tool groups ---
+
+# General tools — messaging, search, analytics
+general_tools = [
     send_message,
     find_contacts,
     get_recent_conversations,
     summarize_conversation,
     get_daily_digest,
     analyze_sentiment,
+]
+
+# Scheduling tools — separate node for routing
+scheduling_tools = [
     schedule_message,
     list_scheduled_messages,
     cancel_scheduled_message,
 ]
 
+# The LLM sees ALL tools so it can decide which to call
+all_tools = general_tools + scheduling_tools
+
+SCHEDULING_TOOL_NAMES = {t.name for t in scheduling_tools}
+
 
 def _get_model():
     """Create the LLM instance lazily (so API key is only needed at runtime)."""
-    return ChatOpenAI(model="gpt-4o-mini", temperature=0.1).bind_tools(tools)
+    return ChatOpenAI(model="gpt-4o-mini", temperature=0.1).bind_tools(all_tools)
 
 
 # --- Node functions ---
@@ -167,37 +185,48 @@ def agent_node(state: AgentState) -> dict:
 def should_continue(state: AgentState) -> str:
     """Determine the next step after the agent responds.
 
-    If the agent called a tool, route to the tool node.
-    Otherwise, end the conversation turn.
+    Routes to the appropriate tool node based on which tools the LLM called,
+    or ends the conversation turn if no tools were called.
     """
     last_message = state["messages"][-1]
 
-    # If the LLM made tool calls, execute them
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
+        # Check if any of the called tools are scheduling tools
+        called_names = {tc["name"] for tc in last_message.tool_calls}
+        if called_names & SCHEDULING_TOOL_NAMES:
+            return "scheduling_tools"
+        return "general_tools"
 
-    # Otherwise, we're done
     return END
 
 
 # --- Build the graph ---
 
-# Create the tool node
-tool_node = ToolNode(tools)
+general_tool_node = ToolNode(general_tools)
+scheduling_tool_node = ToolNode(scheduling_tools)
 
-# Build the state graph
 workflow = StateGraph(AgentState)
 
 # Add nodes
 workflow.add_node("agent", agent_node)
-workflow.add_node("tools", tool_node)
+workflow.add_node("general_tools", general_tool_node)
+workflow.add_node("scheduling_tools", scheduling_tool_node)
 
 # Set entry point
 workflow.set_entry_point("agent")
 
 # Add edges
-workflow.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
-workflow.add_edge("tools", "agent")  # After tool execution, go back to agent
+workflow.add_conditional_edges(
+    "agent",
+    should_continue,
+    {
+        "general_tools": "general_tools",
+        "scheduling_tools": "scheduling_tools",
+        END: END,
+    },
+)
+workflow.add_edge("general_tools", "agent")
+workflow.add_edge("scheduling_tools", "agent")
 
 # Compile the graph (LangGraph Platform handles persistence automatically)
 graph = workflow.compile()

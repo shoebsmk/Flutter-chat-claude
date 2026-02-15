@@ -10,10 +10,6 @@ RUN pip install --no-cache-dir . uvicorn[standard] fastapi
 COPY src/ src/
 COPY server.py .
 
-# Writable directory for SQLite job store
-RUN mkdir -p /app/data
-ENV SCHEDULER_DB_PATH=/app/data/jobs.sqlite
-
 # Cloud Run sets PORT env var
 ENV PORT=8080
 
